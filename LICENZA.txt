@@ -1,0 +1,10 @@
+Pescomante
+Copyright (c) 2026 Damiano (fir3dam). Tutti i diritti riservati.
+
+Il codice, i testi, i dati elaborati e la grafica di Pescomante sono di proprietà dell'autore.
+È vietato copiarli, modificarli, ridistribuirli o riutilizzarli, in tutto o in parte,
+anche tramite strumenti di intelligenza artificiale, senza il permesso scritto dell'autore.
+
+Dati e componenti di terzi (Open-Meteo, EMODnet, GEBCO, OpenStreetMap, OpenSeaMap, Esri,
+Windy, Leaflet, ISTAT/openpolis, DejaVu Sans) restano dei rispettivi autori e sono usati
+secondo le loro licenze: l'elenco completo è nell'app, in Guida > Crediti.

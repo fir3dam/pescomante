@@ -1,6 +1,7 @@
+/* Pescomante © 2026 Damiano (fir3dam). Tutti i diritti riservati. È vietato copiare, modificare, ridistribuire o riutilizzare in tutto o in parte il codice, i testi, i dati elaborati e la grafica di Pescomante, anche tramite strumenti di intelligenza artificiale, senza il permesso scritto dell’autore. Dati e componenti di terzi restano dei rispettivi autori (vedi Guida > Crediti). */
 // Service worker di Pescomante: l'app si apre anche senza rete.
 // Strategia: prima la rete (così gli aggiornamenti arrivano subito), se manca uso la copia salvata.
-const CACHE = 'pescomante-v54-202611162240';
+const CACHE = 'pescomante-v60-202611162328';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
