@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#0a246a">
+<meta name="color-scheme" content="only light" id="colorScheme">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" id="favicon" href="icon-192.png">
 <link rel="apple-touch-icon" id="touchicon" href="icon-180.png">
@@ -21,7 +22,7 @@
   --ink: #000000; --muted: #555555; --grid: #d0d0d0; --night: #ebe9e3; --tag: #ffffe1; --mark: #c00000;
   --v1: #008000; --v2: #4f7d00; --v3: #b08800; --v4: #c05800; --v5: #a00000;
   --ui: Tahoma, "MS Sans Serif", Verdana, Geneva, sans-serif;
-  color-scheme: light;
+  color-scheme: only light;
 }
 :root[data-skin="rosso"]   { --desk: #5b1a22; --t1: #6b0f1a; --t2: #d99aa3; --acc: #7a1020; }
 :root[data-skin="viola"]   { --desk: #3f2d63; --t1: #3d1a6e; --t2: #b9a2dc; --acc: #4b2385; }
@@ -32,7 +33,7 @@
   --ink: #ececec; --muted: #a9a9b0; --grid: #34343a; --night: #26262c; --tag: #4a4420; --mark: #ff5a5a;
   --v1: #3cc13c; --v2: #9cc53d; --v3: #e2b322; --v4: #f07a30; --v5: #ff5a5a;
   --desk: #16304d; --t1: #1c3f8a; --t2: #5b84c4; --acc: #3d6fd1;
-  color-scheme: dark;
+  color-scheme: only dark;
 }
 :root[data-mode="dark"][data-skin="rosso"]   { --desk: #2c0c10; --t1: #7a1424; --t2: #b9606d; --acc: #c0394b; }
 :root[data-mode="dark"][data-skin="viola"]   { --desk: #1d1530; --t1: #4b2385; --t2: #9277c4; --acc: #8a5cd6; }
@@ -78,6 +79,7 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; background: 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   background: var(--desk); color: var(--ink); font: 12px/1.35 var(--ui);
   padding: calc(12px + env(safe-area-inset-top, 0px)) max(12px, env(safe-area-inset-right, 0px)) calc(48px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
@@ -470,7 +472,7 @@ canvas.chart { width: 100%; display: block; }
         <div class="row2"><span><button class="btn raised" id="welLight">Chiaro</button> <button class="btn raised" id="welDark">Scuro</button></span><button class="btn raised" id="welNext"><b>Avanti &raquo;</b></button></div>
       </div>
       <div id="welStep2" hidden>
-        <h2>2. Dove vai a pescare?</h2>
+        <h2>2. Dove peschi di solito?</h2>
         <p class="muted">Cerca il tuo posto o usa la posizione del telefono. I posti preferiti li aggiungi dopo, quando vuoi.</p>
         <div class="row"><input class="field sunken grow" id="welPlace" autocomplete="off" placeholder="Es. Lignano, Venezia, Rimini"><button class="btn raised" id="welGps">Usa la mia posizione</button></div>
         <div class="listbox sunken" id="welRes" hidden></div>
@@ -1615,7 +1617,7 @@ var PescaEngine = (function () {
 <script>
 (function () {
   'use strict';
-  var APP_NAME = 'Pescomante', APP_VERSION = '50', APP_DATE = '2026-11-16';
+  var APP_NAME = 'Pescomante', APP_VERSION = '51', APP_DATE = '2026-11-16';
   var E = PescaEngine, H = E.H, D = E.D;
   var $ = function (id) { return document.getElementById(id); };
   var GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
@@ -1667,6 +1669,7 @@ var PescaEngine = (function () {
     var root = document.documentElement;
     var SPECIAL_MODE = {"x-notte":"dark","x-bosco":"light","x-bosco-grigio":"light","x-foglie":"light","x-neve":"light","x-acqua":"light","x-blu":"light"}, sp = SPECIAL_MODE[S.skin];
     root.setAttribute('data-skin', S.skin || 'blu'); root.setAttribute('data-mode', sp || S.mode || 'light');
+    var csm = document.getElementById('colorScheme'); if (csm) csm.setAttribute('content', (sp || S.mode) === 'dark' ? 'only dark' : 'only light');
     if (S.skin === 'x-acqua' || S.skin === 'x-blu') root.setAttribute('data-aero', ''); else root.removeAttribute('data-aero');
     document.querySelectorAll('#startMenu li[data-act=mode]').forEach(function (li) { li.classList.toggle('off', !!sp); });
     var cs = getComputedStyle(root), g = function (n) { return cs.getPropertyValue(n).trim(); };

@@ -1,6 +1,6 @@
 // Service worker di Pescomante: l'app si apre anche senza rete.
 // Strategia: prima la rete (così gli aggiornamenti arrivano subito), se manca uso la copia salvata.
-const CACHE = 'pescomante-v50-202611162210';
+const CACHE = 'pescomante-v51-202611162225';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (e) => {
