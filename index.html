@@ -55,6 +55,16 @@ body::before { content: ""; position: fixed; inset: 0; z-index: -1; background: 
 :root[data-aero] .taskbar { background-image: linear-gradient(180deg, var(--face), var(--sh2) 50%, var(--sh) 51%, var(--face)); }
 :root[data-aero] .prog i, :root[data-aero] .crown { background-image: linear-gradient(180deg, rgba(255,255,255,.65), var(--acc) 55%); }
 .startmenu li.off { opacity: .45; }
+/* ---- benvenuto ---- */
+.wel h2 { font-size: 14px; margin: 0 0 4px; }
+.wel p { margin: 0 0 8px; }
+.thgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-bottom: 8px; }
+.thgrid button { display: grid; gap: 4px; justify-items: center; padding: 6px 4px; font-size: 11px; min-height: 0; }
+.thgrid i { display: block; width: 100%; height: 26px; box-shadow: inset 1px 1px var(--sh), inset -1px -1px var(--hi); image-rendering: pixelated; background-size: 64px; }
+.thgrid button.on { outline: 2px solid var(--acc); outline-offset: -2px; }
+.wel .row2 { display: flex; gap: 6px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.wel .listbox { max-height: 180px; overflow-y: auto; }
+.favempty { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
 /* ---- web app: tasto installa e finestra istruzioni ---- */
 .installbar { display: flex; justify-content: center; max-width: 560px; margin: 14px auto 0; }
 .installbar .btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; min-height: 32px; font-weight: bold; }
@@ -75,7 +85,29 @@ body {
   min-height: 100vh;
 }
 .desk { display: grid; gap: 12px; max-width: 560px; margin: 0 auto; }
-@media (min-width: 980px) { .desk { max-width: 1120px; grid-template-columns: 1fr 1fr; align-items: start; } }
+@media (min-width: 980px) { .desk { max-width: 1040px; } }
+/* finestra previsioni: gruppi in fila sul telefono, a due colonne sugli schermi larghi */
+.mgrid { grid-template-columns: minmax(0, 1fr); }
+.grp { margin: 0; padding: 6px 8px 8px; min-width: 0; display: grid; gap: 6px; align-content: start; }
+.grp > legend { font-weight: bold; padding: 0 4px; }
+@media (min-width: 980px) {
+  .mgrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .g-top, .g-sp { grid-column: 1 / -1; }
+}
+.topgrid { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: 10px; align-items: start; }
+@media (max-width: 420px) { .topgrid { grid-template-columns: minmax(0, 1fr) 84px; } }
+.topgrid .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.globebox { padding: 3px; aspect-ratio: 1; }
+.globebox canvas { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
+/* preferiti: momento e info sotto la stella */
+.favtabs { display: inline-flex; gap: 0; }
+.favtabs .btn { min-height: 22px; padding: 2px 8px; font-size: 11px; }
+.qinfo { display: grid; grid-template-columns: auto 1fr; gap: 1px 6px; font-size: 11px; margin-top: 4px; padding-top: 4px; border-top: 1px solid var(--sh); box-shadow: 0 -1px var(--hi); }
+.qinfo dt { color: var(--muted); }
+.qinfo dd { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qinfo .moon { vertical-align: -2px; }
+.qinfo .tspark { display: block; background: var(--field); box-shadow: inset 1px 1px var(--sh), inset -1px -1px var(--hi); }
+.fav .when { font-size: 11px; color: var(--muted); }
 .col { display: grid; gap: 12px; min-width: 0; }
 
 /* ---- bevel ---- */
@@ -203,6 +235,8 @@ u { text-decoration: underline; }
 .cal td i { position: absolute; left: 4px; right: 4px; bottom: 3px; height: 4px; }
 .cal td.today span { text-decoration: underline; font-weight: bold; }
 .cal td.sel { background: var(--acc); color: var(--acc-ink); }
+.cal td .moon { position: absolute; top: 2px; right: 2px; }
+.props .moon, dd .moon { vertical-align: -2px; }
 .calhead { display: grid; grid-template-columns: 1fr 86px; gap: 6px; }
 .spin { display: flex; }
 .spin .field { min-width: 0; }
@@ -262,130 +296,110 @@ canvas.chart { width: 100%; display: block; }
   <div class="col">
     <!-- Preferiti -->
     <section class="win raised" id="wFav">
-      <div class="title"><svg class="ico"><use href="#logo"/></svg><span><span class="appname">Pescomante</span> &mdash; Posti preferiti</span><button class="tbtn raised" data-min aria-label="Riduci">_</button></div>
+      <div class="title"><svg class="ico"><use href="#logo"/></svg><span id="favTitle">Posti preferiti</span><button class="tbtn raised" data-min aria-label="Riduci">_</button></div>
       <div class="body">
         <div class="favs" id="favs"></div>
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <span class="muted" id="favWhen">&nbsp;</span>
+        <div class="row" id="favFoot" style="justify-content:space-between;align-items:center">
+          <span class="favtabs" id="favTabs"><button class="btn raised on" data-fm="0">Adesso</button><button class="btn raised" data-fm="1">Domani</button><button class="btn raised" data-fm="2">Dopodomani</button></span>
+          <span class="muted" id="favWhen" hidden>&nbsp;</span>
           <button class="btn raised" id="favEditBtn">Modifica&hellip;</button>
         </div>
         <div class="fedit sunken" id="favEditor" hidden></div>
       </div>
     </section>
 
-    <!-- Previsioni di pesca -->
+    <!-- Previsioni di pesca: tutto in una finestra, dall'alto in basso -->
     <section class="win raised" id="wMain">
       <div class="title"><svg class="ico"><use href="#logo"/></svg><span>Previsioni di pesca</span>
         <button class="tbtn raised" data-min aria-label="Riduci">_</button><button class="tbtn raised" id="helpBtn" aria-label="Guida">?</button></div>
-      <div class="body">
-        <div class="row">
-          <label class="lbl grow"><span><u>L</u>ocalit&agrave;</span><input class="field sunken" id="place" autocomplete="off" placeholder="Es. Lignano, Caorle, Rimini"></label>
-          <button class="btn raised" id="searchBtn">Cerca</button>
-          <button class="btn raised" id="gpsBtn" title="Usa la mia posizione">GPS</button>
-        </div>
-        <div class="listbox sunken" id="results" hidden></div>
-        <div class="grid4">
-          <label class="lbl"><span><u>T</u>ecnica</span><select class="field sunken" id="type"></select></label>
-          <label class="lbl"><span>Pesce <u>t</u>arget</span><select class="field sunken" id="target"></select></label>
-          <label class="lbl"><span><u>A</u>mbiente</span><select class="field sunken" id="env"><option value="auto">Automatico</option><option value="sea">Mare / laguna</option><option value="fresh">Acqua dolce</option></select></label>
-          <label class="lbl"><span><u>P</u>ostazione</span><select class="field sunken" id="spot"><option value="shore">Da riva</option><option value="boat">In barca</option></select></label>
-        </div>
-      </div>
-      <div class="status"><div id="stPlace">Caricamento&hellip;</div><div class="fix" id="stSrc">&nbsp;</div></div>
-    </section>
-
-    <!-- Verdetto -->
-    <section class="win raised" id="wVerdict">
-      <div class="title"><svg class="ico"><use href="#logo"/></svg><span id="vTitle">Verdetto</span><button class="tbtn raised" data-min aria-label="Riduci">_</button></div>
-      <div class="body">
-        <div class="verdict">
-          <div class="bignum" id="vPct">--%</div>
-          <div><div class="vname" id="vName">&nbsp;</div><div class="vlabel" id="vLabel">&nbsp;</div></div>
-        </div>
-        <div class="prog"><i id="vBar" style="width:0"></i></div>
-        <div id="vWhen" class="muted">&nbsp;</div>
-        <ul class="why" id="vWhy"></ul>
-      </div>
-    </section>
-
-    <!-- Data e ora -->
-    <section class="win raised" id="wDate">
-      <div class="title"><svg class="ico"><use href="#logo"/></svg><span>Propriet&agrave; - Data/ora</span><button class="tbtn raised" data-min aria-label="Riduci">_</button></div>
-      <div class="body">
-        <div class="dt">
-          <fieldset><legend>Data</legend>
-            <div class="calhead">
-              <select class="field sunken" id="calMonth" aria-label="Mese"></select>
-              <div class="spin"><input class="field sunken" id="calYear" inputmode="numeric" aria-label="Anno"><div class="arrows"><button class="raised" id="yUp" aria-label="Anno successivo">&#9650;</button><button class="raised" id="yDn" aria-label="Anno precedente">&#9660;</button></div></div>
+      <div class="body mgrid">
+        <fieldset class="grp g-top"><legend>Dove e come</legend>
+          <div class="topgrid">
+            <div class="topctl">
+              <div class="row">
+                <label class="lbl grow"><span><u>L</u>ocalit&agrave;</span><input class="field sunken" id="place" autocomplete="off" placeholder="Es. Lignano, Caorle, Rimini"></label>
+                <button class="btn raised" id="searchBtn">Cerca</button>
+                <button class="btn raised" id="gpsBtn" title="Usa la mia posizione">GPS</button>
+              </div>
+              <div class="listbox sunken" id="results" hidden></div>
+              <div class="grid4">
+                <label class="lbl"><span><u>T</u>ecnica</span><select class="field sunken" id="type"></select></label>
+                <label class="lbl"><span>Pesce <u>t</u>arget</span><select class="field sunken" id="target"></select></label>
+                <label class="lbl"><span><u>A</u>mbiente</span><select class="field sunken" id="env"><option value="auto">Automatico</option><option value="sea">Mare / laguna</option><option value="fresh">Acqua dolce</option></select></label>
+                <label class="lbl"><span><u>P</u>ostazione</span><select class="field sunken" id="spot"><option value="shore">Da riva</option><option value="boat">In barca</option></select></label>
+              </div>
             </div>
-            <div class="cal sunken" style="margin-top:6px"><table id="cal"></table></div>
-            <div class="legend" style="margin-top:6px"><span><i style="background:var(--v1)"></i>Ottimo</span><span><i style="background:var(--v2)"></i>Buono</span><span><i style="background:var(--v3)"></i>Discreto</span><span><i style="background:var(--v4)"></i>Scarso</span><span><i style="background:var(--v5)"></i>Inutile</span></div>
-          </fieldset>
-          <fieldset class="clockbox"><legend>Ora</legend>
-            <canvas id="clock" width="300" height="300" aria-label="Orologio"></canvas>
-            <div style="display:grid;gap:6px;margin-top:6px">
-              <div class="spin"><input class="field sunken" id="timeTxt" readonly aria-label="Ora selezionata" style="text-align:center"><div class="arrows"><button class="raised" id="hUp" aria-label="Un'ora dopo">&#9650;</button><button class="raised" id="hDn" aria-label="Un'ora prima">&#9660;</button></div></div>
-              <button class="btn raised" id="nowBtn">Adesso</button>
-            </div>
-          </fieldset>
-        </div>
-        <input type="range" id="slider" min="0" max="47" step="1" aria-label="Ora del giorno">
-      </div>
-      <div class="status"><div id="stDate">&nbsp;</div></div>
-    </section>
-  </div>
+            <div class="globebox sunken" title="Il posto scelto sul mappamondo"><canvas id="globe" width="88" height="88" aria-label="Mappamondo con il posto scelto"></canvas></div>
+          </div>
+        </fieldset>
 
-  <div class="col">
-    <!-- Andamento giornata -->
-    <section class="win raised" id="wDay">
-      <div class="title"><svg class="ico"><use href="#logo"/></svg><span id="dayTitle">Andamento della giornata</span><button class="tbtn raised" data-min aria-label="Riduci">_</button></div>
-      <div class="body">
-        <div class="sunken" style="padding:2px"><canvas class="chart" id="dayChart" height="130"></canvas></div>
-        <div class="muted" id="dayBest">&nbsp;</div>
-      </div>
-    </section>
+        <fieldset class="grp g-date"><legend>Quando</legend>
+          <div class="dt">
+            <fieldset><legend>Data</legend>
+              <div class="calhead">
+                <select class="field sunken" id="calMonth" aria-label="Mese"></select>
+                <div class="spin"><input class="field sunken" id="calYear" inputmode="numeric" aria-label="Anno"><div class="arrows"><button class="raised" id="yUp" aria-label="Anno successivo">&#9650;</button><button class="raised" id="yDn" aria-label="Anno precedente">&#9660;</button></div></div>
+              </div>
+              <div class="cal sunken" style="margin-top:6px"><table id="cal"></table></div>
+              <div class="legend" style="margin-top:6px"><span><i style="background:var(--v1)"></i>Ottimo</span><span><i style="background:var(--v2)"></i>Buono</span><span><i style="background:var(--v3)"></i>Discreto</span><span><i style="background:var(--v4)"></i>Scarso</span><span><i style="background:var(--v5)"></i>Inutile</span></div>
+            </fieldset>
+            <fieldset class="clockbox"><legend>Ora</legend>
+              <canvas id="clock" width="300" height="300" aria-label="Orologio"></canvas>
+              <div style="display:grid;gap:6px;margin-top:6px">
+                <div class="spin"><input class="field sunken" id="timeTxt" readonly aria-label="Ora selezionata" style="text-align:center"><div class="arrows"><button class="raised" id="hUp" aria-label="Un'ora dopo">&#9650;</button><button class="raised" id="hDn" aria-label="Un'ora prima">&#9660;</button></div></div>
+                <button class="btn raised" id="nowBtn">Adesso</button>
+              </div>
+            </fieldset>
+          </div>
+          <input type="range" id="slider" min="0" max="47" step="1" aria-label="Ora del giorno">
+        </fieldset>
 
-    <!-- Marea -->
-    <section class="win raised" id="wTide">
-      <div class="title"><svg class="ico"><use href="#logo"/></svg><span>Marea</span><button class="tbtn raised" data-min aria-label="Riduci">_</button></div>
-      <div class="body">
-        <div class="sunken" style="padding:2px"><canvas class="chart" id="tideChart" height="150"></canvas></div>
-        <div class="tides" id="tideList"></div>
-        <div class="muted" id="tideNote"></div>
-      </div>
-    </section>
+        <fieldset class="grp g-verdict"><legend id="vTitle">Verdetto</legend>
+          <div class="verdict">
+            <div class="bignum" id="vPct">--%</div>
+            <div><div class="vname" id="vName">&nbsp;</div><div class="vlabel" id="vLabel">&nbsp;</div></div>
+          </div>
+          <div class="prog"><i id="vBar" style="width:0"></i></div>
+          <div id="vWhen" class="muted">&nbsp;</div>
+          <ul class="why" id="vWhy"></ul>
+        </fieldset>
 
-    <!-- Meteo -->
-    <section class="win raised" id="wMeteo">
-      <div class="title"><svg class="ico"><use href="#logo"/></svg><span>Meteo e mare</span><button class="tbtn raised" data-min aria-label="Riduci">_</button></div>
-      <div class="body"><div class="sparks" id="sparks"></div><dl class="props sunken" id="meteo"></dl></div>
-    </section>
+        <fieldset class="grp g-day"><legend id="dayTitle">Andamento della giornata</legend>
+          <div class="sunken" style="padding:2px"><canvas class="chart" id="dayChart" height="130"></canvas></div>
+          <div class="muted" id="dayBest">&nbsp;</div>
+        </fieldset>
 
-    <!-- Specie -->
-    <section class="win raised" id="wSpecies">
-      <div class="title"><svg class="ico"><use href="#logo"/></svg><span>Tutte le specie</span><button class="tbtn raised" data-min aria-label="Riduci">_</button></div>
-      <div class="body">
-        <div class="lvwrap sunken"><table class="lv"><thead><tr><th>Specie</th><th>Probabilit&agrave;</th><th class="n">%</th></tr></thead><tbody id="spList"></tbody></table></div>
-        <div class="row" style="justify-content:space-between;align-items:center">
-          <span class="muted">Tocca una specie per renderla il tuo target.</span>
-          <button class="btn raised" id="presBtn">Cosa gira in zona&hellip;</button>
-        </div>
-        <fieldset id="presBox" hidden><legend id="presTitle">Presenza in zona</legend>
-          <p class="muted" style="margin:0 0 6px">Dimmi tu quanto si vede ogni pesce da queste parti: la tua scelta vale per tutta la zona e prende il posto della mia stima.</p>
-          <div class="pres" id="presList"></div>
-          <div class="row" style="margin-top:6px"><button class="btn raised" id="presReset">Ripristina le stime</button></div>
+        <fieldset class="grp g-tide"><legend>Marea</legend>
+          <div class="sunken" style="padding:2px"><canvas class="chart" id="tideChart" height="150"></canvas></div>
+          <div class="tides" id="tideList"></div>
+          <div class="muted" id="tideNote"></div>
+        </fieldset>
+
+        <fieldset class="grp g-meteo"><legend>Meteo e mare</legend>
+          <div class="sparks" id="sparks"></div><dl class="props sunken" id="meteo"></dl>
+        </fieldset>
+
+        <fieldset class="grp g-sp"><legend>Tutte le specie qui</legend>
+          <div class="lvwrap sunken"><table class="lv"><thead><tr><th>Specie</th><th>Probabilit&agrave;</th><th class="n">%</th></tr></thead><tbody id="spList"></tbody></table></div>
+          <div class="muted">Tocca una specie per renderla il tuo target.</div>
+          <button class="btn raised" id="presBtn" hidden>Cosa gira in zona&hellip;</button>
+          <fieldset id="presBox" hidden><legend id="presTitle">Presenza in zona</legend><div class="pres" id="presList"></div><button class="btn raised" id="presReset">Ripristina le stime</button></fieldset>
         </fieldset>
       </div>
+      <div class="status"><div id="stPlace">Caricamento&hellip;</div><div class="fix" id="stSrc">&nbsp;</div><div class="fix" id="stDate">&nbsp;</div></div>
     </section>
 
     <!-- Guida -->
     <section class="win raised about" id="wHelp" hidden>
       <div class="title"><svg class="ico"><use href="#logo"/></svg><span>Guida di <span class="appname">Pescomante</span></span><button class="tbtn raised" id="helpClose" aria-label="Chiudi">&times;</button></div>
       <div class="body">
-        <p>Il punteggio incrocia stagione, temperatura dell&rsquo;acqua, luce (alba, tramonto, notte), movimento di marea, vento, onde, pioggia, pressione e luna, pesati per ogni specie, per la tecnica, per la postazione (riva o barca) e per quanto la specie frequenta davvero la zona.</p>
-        <p>Il preferito con la corona resta sempre in primo piano col suo pesce. Gli altri restano nell&rsquo;ordine 1-2-3-4 che scegli tu: se non scegli un pesce, mostrano quello che abbocca di pi&ugrave;.</p>
-        <p>Meteo, onde e livello del mare arrivano da Open-Meteo per i prossimi 16 giorni. Oltre, le maree sono calcolate con un modello armonico e il meteo usa le medie stagionali: in quel caso compare l&rsquo;etichetta <span class="tag">stima</span>.</p>
-        <p>&Egrave; una previsione indicativa: controlla sempre divieti, taglie minime e periodi di chiusura della tua regione.</p>
+        <p>Il punteggio incrocia stagione, temperatura dell&rsquo;acqua, luce (alba, tramonto, notte), movimento di marea, vento, onde, pioggia, pressione e luna, pesati per ogni specie, per la tecnica, per la postazione (riva o barca) e per quanto la specie frequenta davvero la zona. Ogni pesce compare solo nelle parti del mondo dove vive davvero; a sud dell&rsquo;equatore le stagioni sono invertite.</p>
+        <p>Il preferito con la stella &#9733; resta sempre in primo piano col suo pesce. Gli altri restano nell&rsquo;ordine 1-2-3-4 che scegli tu: se non scegli un pesce, mostrano quello che abbocca di pi&ugrave;.</p>
+        <p>Meteo, onde e livello del mare arrivano da Open-Meteo per i prossimi 16 giorni. Oltre, le maree sono calcolate con un modello armonico e per temperature dell&rsquo;aria e dell&rsquo;acqua l&rsquo;app usa le medie vere di quel posto negli ultimi anni (vale anche per le date passate): in quel caso compare l&rsquo;etichetta <span class="tag">stima</span>.</p>
+        <p>Il vento conta anche per da dove arriva: da riva, il vento dal mare forma l&rsquo;onda e intorbidisce l&rsquo;acqua (bene per branzino, serra, sarago), il vento da terra spiana il mare e lo schiarisce.</p>
+        <p>&Egrave; una previsione indicativa basata sul comportamento dei pesci, non sui regolamenti: controlla tu divieti, taglie minime e periodi di chiusura della tua zona.</p>
+        <p><b>I tuoi dati.</b> Preferiti e impostazioni restano solo sul tuo telefono. Per meteo, mare e maree l&rsquo;app manda a Open-Meteo le coordinate dei posti che scegli. Se usi &laquo;Usa la mia posizione&raquo;, la tua posizione viene mandata anche a OpenStreetMap (servizio Nominatim), solo per trovare il nome del posto. Non ci sono account, pubblicit&agrave; o tracciamenti.</p>
+        <p class="muted"><span class="appname">Pescomante</span>, <span class="appver"></span>.</p>
       </div>
     </section>
   </div>
@@ -398,6 +412,26 @@ canvas.chart { width: 100%; display: block; }
   <section class="win raised" role="dialog" aria-modal="true" aria-labelledby="dlgTitle">
     <div class="title"><svg class="ico"><use href="#logo"/></svg><span id="dlgTitle">Aggiungi alla schermata Home</span><button class="tbtn raised" id="dlgClose" aria-label="Chiudi">&times;</button></div>
     <div class="body" id="dlgBody"></div>
+  </section>
+</div>
+<div class="modal" id="welcome" hidden>
+  <section class="win raised wel" role="dialog" aria-modal="true" aria-labelledby="welTitle">
+    <div class="title"><svg class="ico"><use href="#logo"/></svg><span id="welTitle">Benvenuto in Pescomante</span></div>
+    <div class="body">
+      <div id="welStep1">
+        <h2>1. Scegli il tuo stile</h2>
+        <p class="muted">Puoi cambiarlo quando vuoi dal menu Start.</p>
+        <div class="thgrid" id="welThemes"></div>
+        <div class="row2"><span><button class="btn raised" id="welLight">Chiaro</button> <button class="btn raised" id="welDark">Scuro</button></span><button class="btn raised" id="welNext"><b>Avanti &raquo;</b></button></div>
+      </div>
+      <div id="welStep2" hidden>
+        <h2>2. Dove vai a pescare?</h2>
+        <p class="muted">Cerca il tuo posto o usa la posizione del telefono. I posti preferiti li aggiungi dopo, quando vuoi.</p>
+        <div class="row"><input class="field sunken grow" id="welPlace" autocomplete="off" placeholder="Es. Palermo, Lago di Garda, Cairns"><button class="btn raised" id="welGps">Usa la mia posizione</button></div>
+        <div class="listbox sunken" id="welRes" hidden></div>
+        <div class="row2" style="margin-top:8px"><button class="btn raised" id="welBack">&laquo; Indietro</button><span class="muted" id="welMsg"></span></div>
+      </div>
+    </div>
   </section>
 </div>
 <input type="file" id="importFile" accept="application/json,.json" hidden>
@@ -428,10 +462,11 @@ canvas.chart { width: 100%; display: block; }
     <li data-act="mode" data-v="light">Chiaro</li>
     <li data-act="mode" data-v="dark">Scuro</li>
     <hr>
-    <li data-act="export" class="pwa">Esporta impostazioni</li>
-    <li data-act="import" class="pwa">Importa impostazioni</li>
+    <li data-act="export" class="pwa" hidden>Esporta impostazioni</li>
+    <li data-act="import" class="pwa" hidden>Importa impostazioni</li>
     <li data-act="install" class="pwa" id="menuInstall">Aggiungi alla schermata Home</li>
     <li data-act="help">Guida</li>
+    <li class="hd appver"></li>
   </ul>
 </div>
 <div class="taskbar">
@@ -455,7 +490,7 @@ var PescaEngine = (function () {
   // wave: onda [min, ottimo-da, ottimo-a, max] metri
   // moon: 'new' preferisce notti buie, 'full' notti chiare, null indifferente
   var SPECIES = [
-    { id: 'branzino', name: 'Branzino', hab: 'sea', season: [.7,.6,.6,.7,.8,.6,.5,.5,.7,.95,1,.9], temp: [7,11,20,27], light: [1,.45,1,.8], tide: .9, wave: [0,.4,1.2,2.2], moon: null },
+    { id: 'branzino', name: 'Branzino', hab: 'sea', season: [.7,.6,.6,.7,.8,.6,.5,.5,.7,.95,1,.9], temp: [7,11,21,29], light: [1,.45,1,.8], tide: .9, wave: [0,.4,1.2,2.2], moon: null },
     { id: 'orata', name: 'Orata', hab: 'sea', season: [.2,.15,.2,.4,.7,.9,1,1,1,.9,.6,.3], temp: [11,17,26,29], light: [.8,.9,.7,.4], tide: .7, wave: [0,0,.5,1.2], moon: 'full' },
     { id: 'serra', name: 'Serra', hab: 'sea', season: [0,0,0,.1,.3,.6,.9,1,1,.8,.3,.05], temp: [15,19,26,29], light: [1,.7,1,.2], tide: .6, wave: [0,.2,1,1.8], moon: null },
     { id: 'sgombro', name: 'Sgombro', hab: 'sea', season: [.1,.1,.2,.5,.8,.9,.8,.7,.8,.7,.4,.2], temp: [11,14,22,26], light: [1,.8,1,.3], tide: .5, wave: [0,0,.6,1.5], moon: null },
@@ -467,38 +502,164 @@ var PescaEngine = (function () {
     { id: 'seppia', name: 'Seppia', hab: 'sea', season: [.3,.4,.8,1,.9,.5,.3,.3,.5,.8,.9,.6], temp: [10,13,20,25], light: [.8,.5,.9,.9], tide: .5, wave: [0,0,.3,.8], moon: 'new' },
     { id: 'calamaro', name: 'Calamaro', hab: 'sea', season: [1,.9,.6,.3,.1,.05,.05,.1,.3,.7,1,1], temp: [10,12,18,23], light: [.5,.1,.8,1], tide: .5, wave: [0,0,.4,1], moon: 'new' },
     { id: 'anguilla', name: 'Anguilla', hab: 'both', season: [.2,.2,.4,.6,.8,.9,1,1,.9,.8,.6,.3], temp: [8,13,25,30], light: [.4,.2,.8,1], tide: .4, wave: [0,0,.6,1.5], moon: 'new' },
-    { id: 'trota', name: 'Trota', hab: 'fresh', season: [0,.3,.9,1,1,.8,.6,.6,.8,.3,.1,0], temp: [2,8,15,21], light: [1,.6,1,.2], tide: 0, wave: null, moon: null },
-    { id: 'luccio', name: 'Luccio', hab: 'fresh', season: [.7,.3,.1,.2,.6,.7,.6,.6,.8,1,1,.9], temp: [2,8,20,26], light: [1,.7,.9,.2], tide: 0, wave: null, moon: null },
+    { id: 'trota', name: 'Trota', hab: 'fresh', season: [.4,.5,.8,1,1,.8,.6,.6,.8,.6,.4,.4], temp: [2,8,15,21], light: [1,.6,1,.2], tide: 0, wave: null, moon: null },
+    { id: 'luccio', name: 'Luccio', hab: 'fresh', season: [.8,.8,.6,.5,.85,.75,.6,.6,.8,1,1,.9], temp: [2,8,20,26], light: [1,.7,.9,.2], tide: 0, wave: null, moon: null },
     { id: 'persico', name: 'Persico reale', hab: 'fresh', season: [.4,.4,.6,.5,.7,.8,.8,.8,.9,1,.8,.5], temp: [4,12,22,27], light: [1,.8,1,.2], tide: 0, wave: null, moon: null },
     { id: 'bass', name: 'Black bass', hab: 'fresh', season: [.1,.1,.3,.6,.9,1,1,1,1,.8,.4,.1], temp: [10,18,27,31], light: [1,.6,1,.3], tide: 0, wave: null, moon: null },
     { id: 'carpa', name: 'Carpa', hab: 'fresh', season: [.2,.3,.6,.9,1,.8,.8,.8,1,.8,.5,.2], temp: [8,16,26,30], light: [.9,.6,.9,1], tide: 0, wave: null, moon: null },
-    { id: 'siluro', name: 'Siluro', hab: 'fresh', season: [.1,.1,.3,.6,.9,1,1,1,.9,.6,.3,.1], temp: [10,18,28,32], light: [.6,.3,.8,1], tide: 0, wave: null, moon: null }
+    { id: 'siluro', name: 'Siluro', hab: 'fresh', season: [.1,.1,.3,.6,.9,1,1,1,.9,.6,.3,.1], temp: [10,18,28,32], light: [.6,.3,.8,1], tide: 0, wave: null, moon: null },
+    { id: 'snakehead', name: 'Snakehead', hab: 'fresh', season: [.5,.5,.6,.8,1,1,1,1,.9,.8,.6,.5], temp: [12,20,32,36], light: [1,.6,1,.4], tide: 0, wave: null, moon: null },
+    { id: 'peacock', name: 'Peacock bass', hab: 'fresh', season: [.9,.9,.85,.8,.8,.85,.9,1,1,1,.95,.9], temp: [21,25,32,35], light: [1,.9,.9,.1], tide: 0, wave: null, moon: null },
+    { id: 'barramundi', name: 'Barramundi', hab: 'both', season: [.8,.8,.9,.9,1,1,1,1,.9,.9,.8,.8], temp: [20,25,32,35], light: [1,.5,1,.8], tide: .8, wave: [0,0,.6,1.5], moon: null },
+    { id: 'ayu', name: 'Ayu', hab: 'fresh', season: [0,0,0,0,.2,.8,1,1,.9,.5,.1,0], temp: [8,14,22,27], light: [.6,1,.7,0], tide: 0, wave: null, moon: null },
+    { id: 'gt', name: 'GT (carango gigante)', hab: 'sea', season: [.9,.9,.9,.95,1,1,1,1,1,1,.95,.9], temp: [22,25,30,33], light: [1,.7,1,.3], tide: .8, wave: [0,.3,1.2,2.2], moon: null },
+    { id: 'hucho', name: 'Hucho (huchen/taimen)', hab: 'fresh', season: [.7,.6,.4,.2,.1,.1,.1,.2,.5,.9,1,.9], temp: [0,3,12,17], light: [1,.6,1,.3], tide: 0, wave: null, moon: null },
+    // --- Mediterraneo ---
+    { id: 'ricciola', name: 'Ricciola', hab: 'sea', season: [.1,.1,.1,.2,.4,.7,.9,1,1,.9,.5,.2], temp: [16,19,26,29], light: [1,.7,1,.2], tide: .5, wave: [0,.2,1,2], moon: null },
+    { id: 'dentice', name: 'Dentice', hab: 'sea', season: [.2,.2,.3,.5,.8,1,.9,.8,.9,1,.7,.3], temp: [13,16,24,27], light: [1,.8,.9,.1], tide: .4, wave: [0,0,.8,1.5], moon: null },
+    { id: 'sarago', name: 'Sarago', hab: 'sea', season: [.8,.8,.7,.6,.6,.6,.6,.6,.7,.9,1,1], temp: [10,14,24,28], light: [1,.6,1,.7], tide: .7, wave: [.2,.5,1.5,2.5], moon: null },
+    { id: 'lampuga', name: 'Lampuga (mahi-mahi)', hab: 'sea', season: [.85,.85,.85,.85,.9,1,1,1,1,1,.9,.85], temp: [20,23,30,32], light: [1,.8,.9,.1], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
+    { id: 'barracuda', name: 'Barracuda', hab: 'sea', season: [.85,.85,.85,.9,.9,1,1,1,1,1,.9,.85], temp: [18,22,30,33], light: [1,.6,1,.4], tide: .6, wave: [0,0,1,2], moon: null },
+    // --- acque interne Europa ---
+    { id: 'lucioperca', name: 'Lucioperca', hab: 'fresh', season: [.8,.7,.6,.4,.4,.6,.6,.6,.8,1,1,.9], temp: [4,12,22,27], light: [1,.4,1,.9], tide: 0, wave: null, moon: null },
+    { id: 'temolo', name: 'Temolo', hab: 'fresh', season: [.5,.5,.4,.4,.5,.8,.9,.9,1,1,.8,.6], temp: [2,7,16,20], light: [.8,1,.9,.1], tide: 0, wave: null, moon: null },
+    // --- Nord America ---
+    { id: 'muskie', name: 'Muskie', hab: 'fresh', season: [.3,.3,.3,.4,.5,.7,.7,.7,.9,1,.9,.5], temp: [4,12,24,28], light: [1,.6,1,.3], tide: 0, wave: null, moon: null },
+    { id: 'walleye', name: 'Walleye', hab: 'fresh', season: [.6,.6,.5,.4,1,.9,.7,.7,.8,.9,.9,.7], temp: [3,10,21,26], light: [1,.3,1,.8], tide: 0, wave: null, moon: null },
+    { id: 'salmone', name: 'Salmone atlantico', hab: 'fresh', season: [.3,.3,.4,.5,.6,.9,1,.9,.7,.5,.3,.2], temp: [4,8,16,20], light: [1,.6,1,.3], tide: 0, wave: null, moon: null },
+    { id: 'salmonepac', name: 'Salmone del Pacifico (king, coho)', hab: 'both', season: [0,0,.1,.2,.4,.7,.9,1,1,.7,.2,0], temp: [5,8,14,18], light: [1,.6,1,.3], tide: .4, wave: [0,0,1,2], moon: null },
+    { id: 'striper', name: 'Striped bass', hab: 'both', season: [.2,.2,.4,.7,1,.8,.5,.5,.7,1,.9,.4], temp: [8,12,22,26], light: [1,.5,1,.8], tide: .8, wave: [0,.3,1.2,2], moon: null },
+    { id: 'redfish', name: 'Red drum (redfish)', hab: 'both', season: [.6,.6,.7,.8,.8,.8,.8,.9,1,1,.9,.7], temp: [10,18,28,31], light: [1,.7,1,.6], tide: .9, wave: [0,0,.8,1.5], moon: null },
+    // --- tropici: flats e costa ---
+    { id: 'tarpon', name: 'Tarpon', hab: 'both', season: [.2,.2,.4,.7,1,1,.9,.7,.5,.4,.3,.2], temp: [22,26,31,34], light: [1,.6,1,.7], tide: .8, wave: [0,0,.8,1.5], moon: null },
+    { id: 'bonefish', name: 'Bonefish', hab: 'sea', season: [.7,.7,.9,1,1,.9,.8,.8,.9,1,.9,.7], temp: [20,24,30,33], light: [.8,1,.8,.1], tide: 1, wave: [0,0,.5,1], moon: null },
+    { id: 'permit', name: 'Permit', hab: 'sea', season: [.4,.5,.8,1,1,.9,.8,.8,.7,.6,.5,.4], temp: [21,24,30,33], light: [.6,1,.7,.2], tide: .9, wave: [0,0,.6,1.2], moon: null },
+    { id: 'snook', name: 'Snook (robalo)', hab: 'both', season: [.5,.5,.7,.9,1,1,1,1,.9,.9,.7,.5], temp: [19,24,30,33], light: [1,.5,1,.9], tide: .9, wave: [0,0,.8,1.5], moon: null },
+    // --- tropici: altura ---
+    { id: 'vela', name: 'Pesce vela', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [22,25,29,31], light: [1,.9,.9,.1], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
+    { id: 'wahoo', name: 'Wahoo', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [21,24,29,31], light: [1,.8,.9,.2], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
+    { id: 'pinnagialla', name: 'Tonno pinna gialla', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [18,22,29,31], light: [1,.8,.9,.4], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
+    { id: 'sgombroreale', name: 'Sgombro reale (king/spanish mackerel)', hab: 'sea', season: [.2,.2,.4,.7,.9,1,1,1,1,.8,.5,.3], temp: [20,23,29,32], light: [1,.7,1,.3], tide: .5, wave: [0,.2,1.2,2], moon: null },
+    // --- fiumi esotici ---
+    { id: 'dorado', name: 'Dorado (golden dorado)', hab: 'fresh', season: [.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8], temp: [16,20,29,32], light: [1,.7,1,.3], tide: 0, wave: null, moon: null },
+    { id: 'tigre', name: 'Pesce tigre', hab: 'fresh', season: [.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8], temp: [18,22,30,33], light: [1,.8,1,.3], tide: 0, wave: null, moon: null },
+    { id: 'nilo', name: 'Persico del Nilo', hab: 'fresh', season: [.7,.7,.9,1,1,1,1,.9,.8,.8,.7,.7], temp: [22,24,30,32], light: [1,.7,1,.5], tide: 0, wave: null, moon: null },
+    { id: 'arapaima', name: 'Arapaima', hab: 'fresh', season: [.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6], temp: [24,26,31,34], light: [1,.8,1,.3], tide: 0, wave: null, moon: null },
+    { id: 'mahseer', name: 'Mahseer', hab: 'fresh', season: [.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6], temp: [14,18,26,29], light: [1,.7,1,.3], tide: 0, wave: null, moon: null },
+    { id: 'smallmouth', name: 'Smallmouth bass', hab: 'fresh', season: [.2,.2,.4,.7,1,.9,.8,.8,.9,1,.7,.3], temp: [8,15,26,29], light: [1,.7,1,.2], tide: 0, wave: null, moon: null },
+    { id: 'grongo', name: 'Grongo', hab: 'sea', season: [.8,.8,.8,.8,.8,.7,.7,.7,.8,.9,1,.9], temp: [8,11,20,25], light: [.4,.1,.7,1], tide: .4, wave: [0,0,1,2], moon: 'new' },
+    { id: 'cavedano', name: 'Cavedano', hab: 'fresh', season: [.6,.6,.7,.8,.8,.9,1,1,1,.9,.8,.7], temp: [1,7,25,29], light: [1,.9,1,.4], tide: 0, wave: null, moon: null },
+    { id: 'murraycod', name: 'Murray cod', hab: 'fresh', season: [.7,.7,.7,.7,.7,.7,.7,.7,.7,.7,.7,.7], temp: [12,16,26,30], light: [1,.6,1,.8], tide: 0, wave: null, moon: null }
   ];
+
+  // Dove vive ogni specie nel mondo (nativa o introdotta stabilmente): riquadri [latMin, latMax, lonMin, lonMax].
+  // Specie non elencata = ovunque (la temperatura dell'acqua fa il resto). Fuori dai riquadri la specie non c'è.
+  var RANGES = {
+    branzino: [[28, 62, -20, 42]],
+    orata: [[14, 56, -20, 42]],
+    serra: [[25, 47, -82, -60], [-40, -15, -60, -35], [8, 46, -20, 42], [-36, -15, 10, 35], [-40, -22, 110, 155]],
+    sgombro: [[28, 70, -20, 42], [34, 52, -76, -50], [20, 45, 118, 150], [-45, -15, 110, 180], [-45, 40, -125, -70]],
+    sugarello: [[-36, 62, -20, 42], [-45, -10, -80, -70], [20, 45, 118, 150], [-48, -25, 110, 180]],
+    leccia: [[-36, 46, -20, 42]],
+    alletterato: [[-30, 45, -100, -30], [-30, 46, -20, 42]],
+    tonno: [[20, 65, -80, 42], [20, 50, 120, 180], [20, 50, -180, -110], [-50, -30, 10, 180]],
+    cefalo: [[-45, 60, -180, 180]],
+    seppia: [[-45, 65, -25, 180]],
+    anguilla: [[25, 72, -25, 45], [5, 30, -98, -50], [30, 60, -100, -50], [-10, 45, 90, 150], [-48, -10, 110, 180], [-35, 5, 25, 60]],
+    carpa: [[20, 65, -10, 145], [15, 60, -130, -60], [-56, -20, -75, -40], [-45, -25, 130, 155], [-35, -22, 15, 33], [-47, -34, 166, 179]],
+    luccio: [[41, 72, -10, 180], [36, 41, -10, 4], [38, 72, -170, -55]],
+    persico: [[41, 72, -10, 180], [36, 41, -10, 4], [38, 62, -120, -60], [-40, -30, 135, 153]],
+    bass: [[24, 50, -105, -65], [14, 33, -118, -86], [19, 24, -85, -74], [35, 50, -10, 30], [30, 44, 128, 146], [-35, -22, 16, 33], [-30, -10, -58, -40]],
+    siluro: [[36, 60, -10, 80]],
+    snakehead: [[-10, 53, 65, 145], [25, 45, -95, -70]],
+    peacock: [[-20, 10, -80, -35], [25, 27.5, -81.5, -80], [17.5, 18.7, -67.5, -65], [18, 23, -161, -154], [0, 15, 98, 105], [7, 10, -83, -77]],
+    barramundi: [[-26, -10, 113, 154], [-10, 25, 65, 155]],
+    ayu: [[21, 46, 108, 146]],
+    gt: [[-30, 30, 30, 180], [-30, 30, -180, -140]],
+    hucho: [[46.2, 51, 12.5, 30], [44, 46.2, 13.6, 30], [44, 70, 60, 145]]
+  };
+  var MED = [30, 46, -6, 37];
+  Object.assign(RANGES, {
+    ricciola: [[-45, 46, -180, 180]],
+    dentice: [[20, 47, -20, 37]],
+    sarago: [[-36, 47, -20, 42]],
+    lampuga: [MED.concat([[.1, 0, 0, 0, 0, .1, .3, .7, 1, 1, .6, .2]]), [-40, 45, -180, 180]],
+    barracuda: [MED.concat([[.2, .1, .1, .2, .4, .6, .8, 1, 1, .9, .6, .3]]), [-35, 35, -180, 180]],
+    lucioperca: [[36, 62, -10, 60]],
+    temolo: [[44, 70, -5, 60], [50, 72, -170, -95], [50, 72, 60, 180]],
+    muskie: [[38, 56, -98, -70]],
+    walleye: [[38, 62, -120, -70]],
+    salmone: [[57, 71, 4, 41], [51, 59, -11, -1], [63, 67, -25, -13], [43, 60, -80, -52], [42, 49, -9, -1]],
+    salmonepac: [[37, 71, -170, -120], [41, 66, 135, 180], [41, 49, -93, -75], [-55, -38, -76, -65], [-46, -42, 169, 174]],
+    striper: [[25, 46, -82, -64], [30, 42, -105, -80], [34, 44, -125, -119]],
+    redfish: [[22, 40, -98, -74]],
+    tarpon: [[-15, 18, -20, 12, [1, 1, 1, .9, .7, .5, .4, .4, .5, .7, .9, 1]], [24, 35, -98, -75], [-25, 24, -98, -35, [.85,.85,.85,.85,.85,.85,.85,.85,.85,.85,.85,.85]]],
+    bonefish: [[16, 27, -90, -60], [18, 23, -161, -154], [-26, 0, 30, 60], [-25, 25, 140, 180], [-25, 25, -180, -140]],
+    permit: [[10, 28, -90, -60]],
+    snook: [[24, 29, -83, -79], [-28, 24, -98, -35, [.85,.85,.85,.85,.85,.85,.85,.85,.85,.85,.85,.85]], [-6, 32, -118, -77, [.85,.85,.85,.85,.85,.85,.85,.85,.85,.85,.85,.85]]],
+    vela: [[-25, 35, -100, -10], [-30, 30, 30, 180], [-30, 30, -180, -77]],
+    wahoo: [[-30, 32, -180, 180]],
+    pinnagialla: [[-35, 35, -180, -6], [-35, 30, -6, 37], [-35, 35, 37, 180]],
+    sgombroreale: [[-28, -10, 110, 155, [.5, .5, .5, .6, .8, 1, 1, 1, 1, .9, .7, .5]], [-35, 30, 30, 160, [.85,.85,.85,.85,.85,.85,.85,.85,.85,.85,.85,.85]], [-25, 40, -98, -35]],
+    dorado: [[-35, -15, -66, -48, [1, 1, .9, .8, .5, .3, .3, .5, .8, .9, 1, 1]]],
+    tigre: [[-22, -8, 20, 40, [.4, .3, .3, .5, .6, .6, .6, .8, 1, 1, 1, .7]]],
+    nilo: [[-4, 4, 29, 35], [3, 25, 28, 34]],
+    arapaima: [[-15, 5, -75, -48, [.3, .2, .2, .2, .3, .5, .7, .9, 1, 1, .9, .6]], [1, 5, -60, -56, [.3, .2, .2, .2, .3, .5, .7, .9, 1, 1, .9, .6]]],
+    mahseer: [[20, 32, 72, 95, [.3, .8, 1, .9, .6, .2, .1, .1, .3, .9, 1, .5]], [10, 14, 75, 78, [.3, .8, 1, .9, .6, .2, .1, .1, .3, .9, 1, .5]]],
+    smallmouth: [[30, 52, -100, -64], [32, 50, -125, -100], [-35, -30, 18, 24], [33, 44, 135, 146]],
+    grongo: [[14, 65, -25, 42]],
+    cavedano: [[36, 62, -10, 45]],
+    murraycod: [[-38, -26, 138, 152, [1, 1, .9, .8, .6, .5, .5, .6, .7, .8, .9, .9]]]
+  });
+  function rangeBox(spId, lat, lon) {
+    var r = RANGES[spId]; if (!r) return null;
+    for (var i = 0; i < r.length; i++) if (lat >= r[i][0] && lat <= r[i][1] && lon >= r[i][2] && lon <= r[i][3]) return r[i];
+    return null;
+  }
+  // attività del mese: stagione regionale se c'è (mesi veri), altrimenti tabella della specie (girata a sud)
+  function seasonAt(sp, lat, lon, month) {
+    var b = rangeBox(sp.id, lat, lon);
+    if (b && b[4]) return b[4][month];
+    return sp.season[seasonMonth(lat, month)];
+  }
+  function inRange(spId, lat, lon) {
+    var r = RANGES[spId]; if (!r) return true;
+    for (var i = 0; i < r.length; i++) if (lat >= r[i][0] && lat <= r[i][1] && lon >= r[i][2] && lon <= r[i][3]) return true;
+    return false;
+  }
+  // stagioni: le tabelle sono scritte per l'emisfero nord; a sud si spostano di 6 mesi
+  function seasonMonth(lat, m) { return lat < 0 ? (m + 6) % 12 : m; }
 
   // Quanto ogni tecnica è adatta a ogni specie (mancante = quasi zero)
   var TYPES = [
-    { id: 'spinning', name: 'Spinning', m: { branzino: 1, serra: 1, leccia: 1, alletterato: 1, tonno: .9, sgombro: .8, sugarello: .7, cefalo: .15, orata: .15, seppia: .25, calamaro: .2, trota: 1, luccio: 1, persico: 1, bass: 1, siluro: .6 } },
-    { id: 'surfcasting', name: 'Surfcasting', m: { alletterato: .1, branzino: .85, orata: 1, serra: .5, anguilla: .7, cefalo: .4, sgombro: .3, sugarello: .3, leccia: .2, seppia: .1, trota: .1, luccio: .1, persico: .3, bass: .2, carpa: .6, siluro: .6 } },
-    { id: 'bolognese', name: 'Bolognese / galleggiante', m: { alletterato: .3, tonno: .05, cefalo: 1, orata: .6, sugarello: .9, sgombro: .9, branzino: .6, serra: .3, leccia: .3, seppia: .2, calamaro: .2, anguilla: .4, trota: .8, luccio: .5, persico: .8, bass: .4, carpa: .9, siluro: .2 } },
-    { id: 'fondo', name: 'Pesca a fondo', m: { orata: .9, branzino: .7, anguilla: 1, cefalo: .5, serra: .2, sgombro: .2, sugarello: .2, leccia: .1, seppia: .1, trota: .4, luccio: .4, persico: .5, bass: .2, carpa: 1, siluro: 1 } },
+    { id: 'spinning', name: 'Spinning', m: { snakehead: .9, peacock: 1, barramundi: 1, gt: 1, hucho: 1, ayu: .2, branzino: 1, serra: 1, leccia: 1, alletterato: 1, tonno: .9, sgombro: .8, sugarello: .7, cefalo: .15, orata: .15, seppia: .25, calamaro: .2, trota: 1, luccio: 1, persico: 1, bass: 1, siluro: .6 } },
+    { id: 'surfcasting', name: 'Surfcasting', m: { barramundi: .4, gt: .2, alletterato: .1, branzino: .85, orata: 1, serra: .5, anguilla: .7, cefalo: .4, sgombro: .3, sugarello: .3, leccia: .2, seppia: .1, trota: .1, luccio: .1, persico: .3, bass: .2, carpa: .6, siluro: .6 } },
+    { id: 'bolognese', name: 'Bolognese / galleggiante', m: { snakehead: .4, peacock: .4, barramundi: .5, ayu: .8, alletterato: .3, tonno: .05, cefalo: 1, orata: .6, sugarello: .9, sgombro: .9, branzino: .6, serra: .3, leccia: .3, seppia: .2, calamaro: .2, anguilla: .4, trota: .8, luccio: .5, persico: .8, bass: .4, carpa: .9, siluro: .2 } },
+    { id: 'fondo', name: 'Pesca a fondo', m: { snakehead: .3, barramundi: .5, hucho: .2, orata: .9, branzino: .7, anguilla: 1, cefalo: .5, serra: .2, sgombro: .2, sugarello: .2, leccia: .1, seppia: .1, trota: .4, luccio: .4, persico: .5, bass: .2, carpa: 1, siluro: 1 } },
     { id: 'eging', name: 'Eging (seppie/calamari)', m: { seppia: 1, calamaro: 1 } },
-    { id: 'traina', name: 'Traina costiera', m: { serra: 1, leccia: 1, alletterato: 1, tonno: .9, sgombro: .9, branzino: .8, sugarello: .7, orata: .05, calamaro: .1, trota: .6, luccio: .9, persico: .4, bass: .5, siluro: .5 } },
-    { id: 'drifting', name: 'Drifting (tonni)', m: { tonno: 1, alletterato: .7, serra: .5, leccia: .5, sgombro: .5, sugarello: .3, branzino: .15 } },
-    { id: 'mosca', name: 'Pesca a mosca', m: { trota: 1, bass: .7, cefalo: .5, branzino: .5, luccio: .6, persico: .5, carpa: .3, sgombro: .4, sugarello: .3, serra: .2, leccia: .2 } }
+    { id: 'traina', name: 'Traina costiera', m: { peacock: .6, barramundi: .9, gt: .8, hucho: .5, serra: 1, leccia: 1, alletterato: 1, tonno: .9, sgombro: .9, branzino: .8, sugarello: .7, orata: .05, calamaro: .1, trota: .6, luccio: .9, persico: .4, bass: .5, siluro: .5 } },
+    { id: 'drifting', name: 'Drifting (tonni)', m: { gt: .4, tonno: 1, alletterato: .7, serra: .5, leccia: .5, sgombro: .5, sugarello: .3, branzino: .15 } },
+    { id: 'mosca', name: 'Pesca a mosca', m: { snakehead: .4, peacock: .7, barramundi: .5, ayu: .7, gt: .3, hucho: .6, trota: 1, bass: .7, cefalo: .5, branzino: .5, luccio: .6, persico: .5, carpa: .3, sgombro: .4, sugarello: .3, serra: .2, leccia: .2 } }
   ];
+
+  var EXTRA_M = {
+    spinning: { smallmouth: 1, grongo: .05, cavedano: .8, ricciola: .7, dentice: .3, sarago: .2, lampuga: .8, barracuda: 1, lucioperca: 1, temolo: .4, muskie: 1, walleye: .9, salmone: .8, salmonepac: .9, striper: 1, redfish: 1, tarpon: .8, bonefish: .7, permit: .8, snook: 1, vela: .3, wahoo: .4, pinnagialla: .8, sgombroreale: .9, dorado: 1, tigre: 1, nilo: .9, arapaima: .6, mahseer: 1, murraycod: 1 },
+    surfcasting: { grongo: .6, smallmouth: .1, sarago: .8, striper: .9, redfish: .7, snook: .3, dentice: .1, ricciola: .1, barracuda: .2, bonefish: .2, permit: .2 },
+    bolognese: { smallmouth: .4, grongo: .3, cavedano: 1, sarago: 1, lucioperca: .4, temolo: .4, walleye: .6, salmonepac: .5, striper: .4, redfish: .6, tarpon: .5, snook: .5, barracuda: .2, ricciola: .2, dentice: .1 },
+    fondo: { smallmouth: .4, grongo: 1, cavedano: .6, sarago: .8, dentice: .3, lucioperca: .6, walleye: .6, striper: .6, redfish: .8, tarpon: .5, bonefish: .4, permit: .5, snook: .5, dorado: .4, tigre: .5, nilo: .6, arapaima: .8, mahseer: .8, murraycod: .8, muskie: .1 },
+    traina: { smallmouth: .5, ricciola: 1, dentice: 1, lampuga: 1, barracuda: .9, lucioperca: .5, muskie: .9, walleye: .8, salmone: .3, salmonepac: 1, striper: .9, tarpon: .5, snook: .3, vela: 1, wahoo: 1, pinnagialla: 1, sgombroreale: 1, dorado: .7, tigre: .8, nilo: 1, murraycod: .6 },
+    drifting: { ricciola: .7, dentice: .6, lampuga: .3, vela: .4, wahoo: .3, pinnagialla: .9, sgombroreale: .5 },
+    mosca: { smallmouth: .8, cavedano: 1, lampuga: .3, barracuda: .3, temolo: 1, muskie: .3, salmone: 1, salmonepac: .7, striper: .6, redfish: .8, tarpon: 1, bonefish: 1, permit: .9, snook: .8, dorado: .8, tigre: .7, arapaima: .5, mahseer: .4 }
+  };
+  TYPES.forEach(function (t) { var x = EXTRA_M[t.id]; if (x) for (var k in x) t.m[k] = x[k]; });
 
   // Climatologia di riserva (oltre i 16 giorni di previsione)
   var CLIM_AIR = [4, 5, 9, 13, 18, 22, 25, 24, 20, 15, 10, 5];
   var CLIM_SST = [10, 9.5, 10.5, 13, 18, 22.5, 25.5, 26, 23, 19, 15.5, 12];
 
   var DEFAULT_PLACE = { name: 'Lignano Sabbiadoro', lat: 45.6759, lon: 13.1173 };
-  var DEFAULT_QUEEN = { name: 'Lignano Sabbiadoro', lat: 45.6759, lon: 13.1173, env: 'sea', fish: 'branzino' };
-  var DEFAULT_FAVS = [
-    { name: 'Lignano Sabbiadoro', lat: 45.6759, lon: 13.1173, env: 'sea' },
-    { name: 'Sesto al Reghena', lat: 45.8476, lon: 12.8150, env: 'fresh' },
-    { name: 'Rimini', lat: 44.0678, lon: 12.5695, env: 'sea', spot: 'boat' },
-    { name: 'Chioggia', lat: 45.2186, lon: 12.2788, env: 'sea' }
-  ];
+  var DEFAULT_QUEEN = null;
+  var DEFAULT_FAVS = [];
 
   function byId(list, id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return list[0]; }
   function clamp(x, a, b) { return Math.max(a, Math.min(b, x)); }
@@ -515,7 +676,8 @@ var PescaEngine = (function () {
     var j = await getJSON('https://geocoding-api.open-meteo.com/v1/search?count=8&language=it&name=' + encodeURIComponent(name));
     // prima i posti italiani, poi il resto (ordine originale mantenuto a parità)
     return (j.results || []).map(function (r, i) {
-      return { name: r.name, lat: r.latitude, lon: r.longitude, detail: [r.admin1, r.country].filter(Boolean).join(', '), it: r.country_code === 'IT' ? 0 : 1, i: i };
+      var fc = r.feature_code || '', broad = /^(PCL|ADM1|ADM2|RGN|CONT)/.test(fc) ? (/^PCL/.test(fc) ? 'stato' : /^ADM1|^RGN/.test(fc) ? 'regione' : /^CONT/.test(fc) ? 'continente' : 'provincia') : null;
+      return { name: r.name, lat: r.latitude, lon: r.longitude, detail: (broad ? '[' + broad + '] ' : '') + [r.admin1, r.country].filter(Boolean).join(', '), broad: broad, it: r.country_code === 'IT' ? 0 : 1, i: i };
     }).sort(function (a, b) { return a.it - b.it || a.i - b.i; });
   }
 
@@ -544,7 +706,8 @@ var PescaEngine = (function () {
         if (i < 0 || i >= n) return;
         keys.forEach(function (k) { var c = col(m, k[0]); if (c) d[k[1]][i] = c[j]; });
       });
-      var cnt = d.sea.filter(function (x) { return x != null; }).length + d.wave.filter(function (x) { return x != null; }).length;
+      // mare vero = c'è il livello del mare (i grandi laghi hanno solo le onde)
+      var cnt = d.sea.filter(function (x) { return x != null; }).length + d.sst.filter(function (x) { return x != null; }).length;
       d.marine = cnt > 48;
       d.tide = fitTide(d);
     }
@@ -553,6 +716,34 @@ var PescaEngine = (function () {
     while (d.lastIdx > 0 && d.temp[d.lastIdx] == null) d.lastIdx--;
     return d;
   }
+
+  // ---------- Medie climatiche del posto (anni scorsi, Open-Meteo archivio) ----------
+  // Un valore per giorno dell'anno: aria (ultimi 5 anni) e mare (ultimi 2 anni). Si scarica una volta e si tiene in memoria.
+  function doyOfDate(y, m, dd) { return Math.round((Date.UTC(y, m, dd) - Date.UTC(y, 0, 1)) / D); }
+  function dailyClim(times, vals) {
+    var s = new Array(366).fill(0), k = new Array(366).fill(0);
+    for (var i = 0; i < times.length; i++) {
+      var v = vals[i]; if (v == null) continue;
+      var p = String(times[i]).slice(0, 10).split('-'), j = doyOfDate(+p[0], +p[1] - 1, +p[2]);
+      s[j] += v; k[j]++;
+    }
+    var raw = s.map(function (x, j) { return k[j] ? x / k[j] : null; });
+    if (raw.filter(function (x) { return x != null; }).length < 300) return null;
+    var out = [];
+    for (var j = 0; j < 366; j++) { var a = 0, n = 0; for (var w = -10; w <= 10; w++) { var x = raw[(j + w + 366) % 366]; if (x != null) { a += x; n++; } } out.push(n ? Math.round(a / n * 10) / 10 : null); }
+    return out;
+  }
+  async function loadClimate(getJSON, lat, lon) {
+    var y = new Date().getUTCFullYear(), q = 'latitude=' + lat.toFixed(3) + '&longitude=' + lon.toFixed(3);
+    var aUrl = 'https://archive-api.open-meteo.com/v1/archive?' + q + '&start_date=' + (y - 5) + '-01-01&end_date=' + (y - 1) + '-12-31&daily=temperature_2m_mean&timezone=GMT';
+    var mUrl = 'https://marine-api.open-meteo.com/v1/marine?' + q + '&start_date=' + (y - 2) + '-01-01&end_date=' + (y - 1) + '-12-31&hourly=sea_surface_temperature&timezone=GMT';
+    var r = await Promise.all([getJSON(aUrl).catch(function () { return null; }), getJSON(mUrl).catch(function () { return null; })]);
+    var air = r[0] && r[0].daily ? dailyClim(r[0].daily.time, r[0].daily.temperature_2m_mean) : null;
+    var sst = r[1] && r[1].hourly ? dailyClim(r[1].hourly.time, r[1].hourly.sea_surface_temperature) : null;
+    if (!air && !sst) throw new Error('Medie climatiche non disponibili');
+    return { v: 1, air: air, sst: sst };
+  }
+  function climDoy(d, t) { var l = local(d, t); return doyOfDate(l.getUTCFullYear(), l.getUTCMonth(), l.getUTCDate()); }
 
   // ---------- Maree: modello armonico stimato dai dati (per date oltre la previsione) ----------
   var CONST = [28.9841042, 30.0, 28.4397295, 15.0410686, 13.9430356, 57.9682084]; // M2 S2 N2 K1 O1 M4 (°/h)
@@ -683,9 +874,13 @@ var PescaEngine = (function () {
   function conditions(d, t) {
     var month = local(d, t).getUTCMonth();
     var fc = val(d.temp, d, t) != null;
+    var climAir = climOf(d, 'temp', CLIM_AIR, month), climSst = climOf(d, 'sst', CLIM_SST, month);
+    var cl = d.clim, doy = climDoy(d, t);
+    if (cl && cl.air && cl.air[doy] != null) { var hr = local(d, t).getUTCHours(); climAir = cl.air[doy] + 3 * Math.sin(2 * Math.PI * (hr - 9) / 24); }
+    if (cl && cl.sst && cl.sst[doy] != null) climSst = cl.sst[doy];
     var c = {
       t: t, forecast: fc,
-      temp: fc ? val(d.temp, d, t) : CLIM_AIR[month],
+      temp: fc ? val(d.temp, d, t) : climAir,
       rain: fc ? val(d.rain, d, t) : null,
       cloud: fc ? val(d.cloud, d, t) : null,
       press: fc ? val(d.press, d, t) : null,
@@ -698,11 +893,12 @@ var PescaEngine = (function () {
     };
     var p3 = val(d.press, d, t - 3 * H);
     c.dp3 = (c.press != null && p3 != null) ? c.press - p3 : null;
-    if (c.sst == null && d.marine) { c.sst = CLIM_SST[month]; c.sstEst = true; }
+    if (c.sst == null && d.marine) { c.sst = climSst; c.sstEst = true; }
     // acqua dolce: stima dalla media aria delle 72 h precedenti
     var sum = 0, k = 0;
     for (var h = 0; h < 72; h += 3) { var v = val(d.temp, d, t - h * H); if (v != null) { sum += v; k++; } }
-    var avgAir = k > 8 ? sum / k : CLIM_AIR[month];
+    var avgAir = k > 8 ? sum / k : climAir;
+    if (k <= 8 && cl && cl.air) { var s2 = 0, k2 = 0; for (var dd = 0; dd < 15; dd++) { var x = cl.air[(doy - dd + 366) % 366]; if (x != null) { s2 += x; k2++; } } if (k2) avgAir = s2 / k2; c.freshEst = true; }
     c.freshT = Math.max(2, avgAir * 0.85 + 2);
     // sole
     var mid = localMidnight(d, t), sun = sunTimes(mid, d.lat, d.lon);
@@ -713,6 +909,7 @@ var PescaEngine = (function () {
     else if (t >= sun.rise && t < sun.set) c.period = 1;
     else c.period = 3;
     c.moon = moon(t);
+    c.wside = windSide(d, c.wdir);
     // marea
     var s0 = seaLevel(d, t);
     if (s0) {
@@ -728,14 +925,27 @@ var PescaEngine = (function () {
 
   var PERIOD_NAMES = ['alba', 'giorno', 'tramonto', 'notte'];
 
+  function climOf(d, key, CL, month) {
+    var amp = clamp((Math.abs(d.lat) - 12) / 30, 0.15, 1);
+    var mean = 0; for (var i = 0; i < 12; i++) mean += CL[i]; mean /= 12;
+    var shape = function (m) { return mean + amp * (CL[seasonMonth(d.lat, m)] - mean); };
+    d._clim = d._clim || {};
+    if (d._clim[key] == null) {
+      var arr = d[key], s = 0, k = 0;
+      if (arr) for (var j = 0; j < arr.length; j++) if (arr[j] != null) { s += arr[j]; k++; }
+      var mid = local(d, d.t0 + (d.n / 2) * H).getUTCMonth();
+      d._clim[key] = k > 24 ? s / k - shape(mid) : 0;
+    }
+    return shape(month) + d._clim[key];
+  }
   function envOf(d, setting) { return setting === 'sea' || setting === 'fresh' ? setting : (d.marine ? 'sea' : 'fresh'); }
 
   // ---------- Riva / barca ----------
   var SPOT = 'shore';
   function setSpot(s) { SPOT = s === 'boat' ? 'boat' : 'shore'; }
   // da riva: quanto è realistico prendere la specie (Alto Adriatico, fondali bassi)
-  var SHORE = { tonno: 0.08, alletterato: 0.45, leccia: 0.8, calamaro: 0.8 };
-  var BOAT = { tonno: 1, alletterato: 1, leccia: 1, serra: 1, sgombro: 1 };
+  var SHORE = { tonno: 0.08, alletterato: 0.45, leccia: 0.8, calamaro: 0.8, ricciola: .3, dentice: .2, lampuga: .05, vela: .01, wahoo: .01, pinnagialla: .02, sgombroreale: .3, barracuda: .7, gt: .6 };
+  var BOAT = { tonno: 1, alletterato: 1, leccia: 1, serra: 1, sgombro: 1, ricciola: 1, dentice: 1, lampuga: 1, vela: 1, wahoo: 1, pinnagialla: 1, sgombroreale: 1 };
 
   // Presenza locale: quanto la specie frequenta davvero la zona (1 = normale)
   var ZONES = [
@@ -754,8 +964,10 @@ var PescaEngine = (function () {
   }
   function presenceInfo(lat, lon, spId) {
     var zn = zoneOf(lat, lon), u = USER_PRES[zn.key];
-    if (u && u[spId] != null) return { v: u[spId], user: true, zone: zn.name };
-    return { v: zn.z && zn.z.p[spId] != null ? zn.z.p[spId] : 1, user: false, zone: zn.name };
+    if (u && u[spId] != null) return { v: u[spId], user: true, zone: zn.name, range: inRange(spId, lat, lon) };
+    var inR = inRange(spId, lat, lon);
+    if (!inR) return { v: 0, user: false, zone: zn.name, range: false };
+    return { v: zn.z && zn.z.p[spId] != null ? zn.z.p[spId] : 1, user: false, zone: zn.name, range: true };
   }
   function presence(d, spId) { return presenceInfo(d.lat, d.lon, spId).v; }
 
@@ -777,23 +989,26 @@ var PescaEngine = (function () {
       if (BOAT[sp.id]) why.push(['+', 'In barca raggiungi i branchi al largo']);
     }
 
-    if (env === 'sea') {
-      var pres = presence(d, sp.id);
-      mult *= pres;
-      if (pres === 0) why.push(['-', 'In questa zona non c’è']);
-      else if (pres < 0.3) why.push(['-', 'Qui è di passaggio solo raramente']);
+    var pi = presenceInfo(d.lat, d.lon, sp.id), pres = pi.v;
+    mult *= pres;
+    if (pres === 0) why.push(['-', !pi.range && !pi.user ? 'Non vive in questa parte del mondo' : 'In questa zona non c’è']);
+    else {
+      if (pres < 0.3) why.push(['-', 'Qui è di passaggio solo raramente']);
       else if (pres > 1) why.push(['+', 'Abbondante in zona (segnalato da te)']);
       else if (pres >= 1 && (sp.id === 'tonno' || sp.id === 'alletterato')) why.push(['+', 'Zona frequentata dai branchi']);
     }
 
-    var season = sp.season[month];
+    // pesci di mare che risalgono i fiumi: lontano dalla costa (nessun dato marino) si vedono poco
+    if (env === 'fresh' && !d.marine && (sp.id === 'cefalo' || sp.id === 'barramundi')) { mult *= 0.25; why.push(['-', 'Lontano dal mare: risale poco i fiumi']); }
+
+    var season = seasonAt(sp, d.lat, d.lon, month);
     if (season >= 0.85) why.push(['+', 'Piena stagione']); else if (season < 0.35) why.push(['-', 'Fuori stagione']);
 
     var wt = env === 'sea' ? c.sst : c.freshT;
     // temperatura morbida: fuori dall'intervallo cala molto ma non azzera
     var temp = 0.12 + 0.88 * trap(wt, sp.temp);
     if (wt != null) {
-      var tt = 'Acqua ' + wt.toFixed(1) + '°C';
+      var tt = 'Acqua ' + wt.toFixed(1) + '°C' + ((env === 'sea' ? c.sstEst : c.freshEst) ? ' (media degli anni scorsi)' : '');
       if (temp >= 0.9) why.push(['+', tt + ' ideale']);
       else if (temp < 0.4) why.push(['-', tt + (wt < sp.temp[1] ? ' troppo fredda' : ' troppo calda')]);
     }
@@ -821,7 +1036,12 @@ var PescaEngine = (function () {
     }
     var sf = (c.code != null && c.code >= 95) ? 0.05 : 1;
     if (sf < 1) why.push(['-', 'Temporale: resta a casa!']);
-    var weather = wf * vf * rf * sf;
+    // da riva, per i pesci che amano un po' di mare formato: vento dal mare aiuta, vento da terra spiana e schiarisce
+    if (env === 'sea' && SPOT === 'shore' && sp.wave && sp.wave[1] > 0 && c.wside && w != null && w >= 8 && w <= 35) {
+      if (c.wside === 'mare') { wf *= 1.08; why.push(['+', 'Vento da mare: acqua mossa e torbida']); }
+      else if (c.wside === 'terra') { wf *= 0.85; why.push(['-', 'Vento da terra: mare piatto e acqua chiara']); }
+    }
+    var weather = Math.min(1, wf * vf * rf * sf);
     if (!c.forecast) weather = 0.75;
 
     var pf = 0.8;
@@ -895,6 +1115,12 @@ var PescaEngine = (function () {
     return { from: a, to: b + 1, pct: max };
   }
 
+  // d.seaDir = direzione (gradi) verso il mare aperto dal posto; il vento "da" quella direzione arriva dal mare
+  function windSide(d, wdir) {
+    if (d.seaDir == null || wdir == null) return null;
+    var diff = Math.abs(((wdir - d.seaDir) % 360 + 540) % 360 - 180);
+    return diff <= 60 ? 'mare' : diff >= 120 ? 'terra' : 'lato';
+  }
   function windName(deg) {
     if (deg == null) return '';
     return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'][Math.round(deg / 45) % 8];
@@ -906,9 +1132,9 @@ var PescaEngine = (function () {
     SPECIES: SPECIES, TYPES: TYPES, DEFAULT_PLACE: DEFAULT_PLACE, DEFAULT_FAVS: DEFAULT_FAVS, DEFAULT_QUEEN: DEFAULT_QUEEN, bestAt: bestAt, pressLabel: pressLabel, daySeries: daySeries, H: H, D: D,
     geocode: geocode, loadData: loadData, conditions: conditions, score: score, scoreAll: scoreAll,
     dayCurve: dayCurve, bestWindow: bestWindow, tideExtremes: tideExtremes, seaLevel: seaLevel,
-    local: local, localMidnight: localMidnight, moon: moon, envOf: envOf, windName: windName, skyName: skyName, verdict: verdict,
+    local: local, localMidnight: localMidnight, moon: moon, envOf: envOf, windName: windName, windSide: windSide, skyName: skyName, verdict: verdict,
     byId: byId, PERIOD_NAMES: PERIOD_NAMES, setSpot: setSpot,
-    setPresence: setPresence, zoneOf: zoneOf, presenceInfo: presenceInfo, PRES_LEVELS: PRES_LEVELS
+    setPresence: setPresence, zoneOf: zoneOf, presenceInfo: presenceInfo, PRES_LEVELS: PRES_LEVELS, inRange: inRange, loadClimate: loadClimate, seasonAt: seasonAt
   };
 })();
 
@@ -916,7 +1142,7 @@ var PescaEngine = (function () {
 <script>
 (function () {
   'use strict';
-  var APP_NAME = 'Pescomante';
+  var APP_NAME = 'Pescomante', APP_VERSION = '15', APP_DATE = '2026-11-16';
   var E = PescaEngine, H = E.H, D = E.D;
   var $ = function (id) { return document.getElementById(id); };
   var GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
@@ -938,13 +1164,17 @@ var PescaEngine = (function () {
     im.src = src;
   })();
   document.querySelectorAll('.appname').forEach(function (el) { el.textContent = APP_NAME; });
+  document.querySelectorAll('.appver').forEach(function (el) { el.textContent = 'versione ' + APP_VERSION + ' del ' + APP_DATE.split('-').reverse().join('/'); });
 
   // ---------- impostazioni ----------
   function cloneFavs() { return E.DEFAULT_FAVS.map(function (f) { return Object.assign({ spot: 'shore', fish: null }, f); }); }
-  var DEF = { place: E.DEFAULT_PLACE, type: 'spinning', target: 'branzino', env: 'auto', spot: 'shore', queen: Object.assign({ spot: 'shore' }, E.DEFAULT_QUEEN), favs: cloneFavs(), skin: 'blu', mode: 'light' };
+  var DEF = { place: E.DEFAULT_PLACE, type: 'spinning', target: 'branzino', env: 'auto', spot: 'shore', queen: E.DEFAULT_QUEEN ? Object.assign({ spot: 'shore' }, E.DEFAULT_QUEEN) : null, favs: cloneFavs(), skin: 'blu', mode: 'light' };
   var S = Object.assign({}, DEF);
-  try { var saved = JSON.parse(localStorage.getItem('pesca.settings') || 'null'); if (saved) S = Object.assign(S, saved); } catch (e) {}
+  var saved = null;
+  try { saved = JSON.parse(localStorage.getItem('pesca.settings') || 'null'); if (saved) S = Object.assign(S, saved); } catch (e) {}
   if (window.__PESCA_INIT) S = Object.assign(S, window.__PESCA_INIT);
+  // chi aveva già impostato l'app prima di questa versione non rivede il benvenuto
+  if (!S.setup && (S.queen || (Array.isArray(S.favs) && S.favs.some(Boolean)))) S.setup = true;
   function validSp(id) { return E.SPECIES.some(function (x) { return x.id === id; }); }
   if (!validSp(S.target)) S.target = 'branzino';
   if (!Array.isArray(S.favs)) S.favs = cloneFavs();
@@ -969,6 +1199,8 @@ var PescaEngine = (function () {
     var cs = getComputedStyle(root), g = function (n) { return cs.getPropertyValue(n).trim(); };
     var tc = document.querySelector('meta[name=theme-color]'); if (tc) tc.setAttribute('content', g('--t1') || '#0a246a');
     T = { field: g('--field'), ink: g('--ink'), muted: g('--muted'), grid: g('--grid'), night: g('--night'), acc: g('--acc'), t2: g('--t2'), face: g('--face'), dk: g('--dk'), hi: g('--hi'), mark: g('--mark') };
+    T.t1 = g('--t1');
+    if (typeof drawGlobe === 'function') try { drawGlobe(); } catch (e) {}
     COLORS = { OTTIMO: g('--v1'), BUONO: g('--v2'), DISCRETO: g('--v3'), SCARSO: g('--v4'), INUTILE: g('--v5') };
     document.querySelectorAll('#startMenu li[data-act=skin], #startMenu li[data-act=mode]').forEach(function (li) {
       li.classList.toggle('chk', li.dataset.act === 'skin' ? S.skin === li.dataset.v : (!/^x-/.test(S.skin || '') && S.mode === li.dataset.v));
@@ -993,19 +1225,57 @@ var PescaEngine = (function () {
 
   // ---------- popolamento select ----------
   E.TYPES.forEach(function (t) { $('type').add(new Option(t.name, t.id)); });
-  E.SPECIES.forEach(function (s) { $('target').add(new Option(s.name, s.id)); });
+  // pesci presenti qui in alto; gli altri in un gruppo a parte
+  function fillTargets() {
+    var sel = $('target'), yes = [], no = [];
+    E.SPECIES.forEach(function (s) { var pi = E.presenceInfo(S.place.lat, S.place.lon, s.id); (pi.v > 0 || pi.user ? yes : no).push(s); });
+    sel.innerHTML = '';
+    yes.forEach(function (s) { sel.add(new Option(s.name, s.id)); });
+    if (no.length) { var g = document.createElement('optgroup'); g.label = 'Non vivono qui'; no.forEach(function (s) { g.appendChild(new Option(s.name, s.id)); }); sel.appendChild(g); }
+    sel.value = S.target;
+  }
+  fillTargets();
   MESI.forEach(function (m, i) { $('calMonth').add(new Option(m.charAt(0).toUpperCase() + m.slice(1), i)); });
   $('type').value = S.type; $('target').value = S.target; $('env').value = S.env; $('spot').value = S.spot; $('place').value = S.place.name;
 
   // ---------- caricamento ----------
   var favData = {};
+  // medie climatiche del posto: scaricate una volta, poi tenute nel browser
+  function climKey(lat, lon) { return 'pesca.clim.' + lat.toFixed(2) + '_' + lon.toFixed(2); }
+  function getClim(lat, lon) {
+    try { var c = JSON.parse(localStorage.getItem(climKey(lat, lon)) || 'null'); if (c && c.v === 1) return Promise.resolve(c); } catch (e) {}
+    return E.loadClimate(getJSON, lat, lon).then(function (c) { try { localStorage.setItem(climKey(lat, lon), JSON.stringify(c)); } catch (e) {} return c; }, function () { return null; });
+  }
+  function loadPlace(lat, lon) {
+    return Promise.all([E.loadData(getJSON, lat, lon), getClim(lat, lon)]).then(function (r) { if (r[1]) r[0].clim = r[1]; if (r[0].marine) r[0].seaDir = seaBearing(lat, lon); return r[0]; });
+  }
+  // verso dove sta il mare: media delle direzioni in cui, intorno al posto, la mappa trova acqua
+  function seaBearing(lat, lon) {
+    var sx = 0, sy = 0, n = 0, tot = 0;
+    [0.3, 0.6, 1, 1.5].forEach(function (r) {
+      for (var b = 0; b < 360; b += 15) {
+        var rad = b * Math.PI / 180, la = lat + r * Math.cos(rad), lo = lon + r * Math.sin(rad) / Math.max(0.2, Math.cos(lat * Math.PI / 180));
+        tot++; if (!isLand(la, lo)) { sx += Math.sin(rad); sy += Math.cos(rad); n++; }
+      }
+    });
+    if (n < tot * 0.1 || n > tot * 0.92 || Math.hypot(sx, sy) < n * 0.15) return null;
+    return (Math.atan2(sx, sy) * 180 / Math.PI + 360) % 360;
+  }
   function fkey(f) { return f.lat.toFixed(3) + ',' + f.lon.toFixed(3); }
   async function load() {
     $('stPlace').textContent = 'Scarico meteo e maree per ' + S.place.name + '…';
     try {
       var fk = fkey(S.place);
-      data = (favData[fk] && typeof favData[fk] === 'object') ? favData[fk] : await E.loadData(getJSON, S.place.lat, S.place.lon);
+      data = (favData[fk] && typeof favData[fk] === 'object') ? favData[fk] : await loadPlace(S.place.lat, S.place.lon);
       favData[fk] = data;
+      // primo avvio o posto nuovo: scelgo io il pesce più attivo che vive davvero lì
+      if (S.needTarget) {
+        var bb = E.bestAt(data, Date.now(), S.env, null);
+        if (bb) { S.target = bb.id; S.type = bb.typeId; $('type').value = S.type; }
+        delete S.needTarget; save();
+      }
+      fillTargets();
+      if (G.tLat !== S.place.lat || G.tLon !== S.place.lon) globeTo(S.place.lat, S.place.lon);
       loadFavs();
       calCache = {};
       var l = L(sel); calY = l.getUTCFullYear(); calM = l.getUTCMonth();
@@ -1022,41 +1292,88 @@ var PescaEngine = (function () {
       var k = fkey(f);
       if (favData[k]) return;
       favData[k] = 'loading';
-      E.loadData(getJSON, f.lat, f.lon).then(function (d) { favData[k] = d; renderFavs(); }, function () { favData[k] = 'err'; renderFavs(); });
+      loadPlace(f.lat, f.lon).then(function (d) { favData[k] = d; renderFavs(); }, function () { favData[k] = 'err'; renderFavs(); });
     });
   }
+  // momento dei preferiti: 0 = adesso; 1, 2 = il momento migliore di domani / dopodomani
+  var favMode = 0, favOpened = false;
   function favBest(f) {
     var d = favData[fkey(f)];
     if (!d || typeof d !== 'object') return { st: d };
     E.setSpot(f.spot || 'shore');
-    var b = E.bestAt(d, sel, f.env, f.fish || null);
+    var b, t = Date.now();
+    if (favMode === 0) b = E.bestAt(d, t, f.env, f.fish || null);
+    else {
+      var mid = E.localMidnight(d, Date.now()) + favMode * D;
+      for (var h = 0; h < 24; h++) { var tt = mid + h * H + 30 * 60e3, x = E.bestAt(d, tt, f.env, f.fish || null); if (x && (!b || x.pct > b.pct)) { b = x; t = tt; } }
+    }
     E.setSpot(S.spot);
-    return { b: b };
+    return { b: b, t: t, d: d };
   }
+  function favHHMM(d, t) { var l = E.local(d, t); return pad(l.getUTCHours()) + ':' + pad(l.getUTCMinutes()); }
+  // marea delle prossime 24 ore in miniatura: linea, adesso (trattino) e alte/basse (pallini)
+  function tideSpark(d, t0) {
+    var W = 150, Hh = 30, pts = [], lo = 1e9, hi = -1e9;
+    for (var m = 0; m <= 24 * 60; m += 20) { var s = E.seaLevel(d, t0 + m * 60e3); if (!s) return ''; pts.push(s.h); lo = Math.min(lo, s.h); hi = Math.max(hi, s.h); }
+    var pad = Math.max(0.03, (hi - lo) * 0.15); lo -= pad; hi += pad;
+    var X = function (i) { return (i * (W - 2) / (pts.length - 1) + 1).toFixed(1); }, Y = function (v) { return (Hh - 2 - (Hh - 4) * (v - lo) / (hi - lo)).toFixed(1); };
+    var line = pts.map(function (v, i) { return (i ? 'L' : 'M') + X(i) + ',' + Y(v); }).join('');
+    var dots = E.tideExtremes(d, t0, t0 + 24 * H).map(function (e) { var i = (e.t - t0) / (20 * 60e3); return '<circle cx="' + (i * (W - 2) / (pts.length - 1) + 1).toFixed(1) + '" cy="' + Y(e.h) + '" r="2" fill="' + (e.type === 'alta' ? 'var(--acc)' : 'var(--muted)') + '"/>'; }).join('');
+    return '<svg class="tspark" width="100%" height="' + Hh + '" viewBox="0 0 ' + W + ' ' + Hh + '" preserveAspectRatio="none" aria-label="Marea delle prossime 24 ore"><path d="' + line + 'L' + (W - 1) + ',' + Hh + 'L1,' + Hh + 'Z" fill="var(--t2)" opacity=".35"/><path d="' + line + '" fill="none" stroke="var(--t1)" stroke-width="1.5" vector-effect="non-scaling-stroke"/><line x1="1" y1="0" x2="1" y2="' + Hh + '" stroke="var(--mark)" stroke-width="2" vector-effect="non-scaling-stroke"/>' + dots + '</svg>';
+  }
+  // info utili sotto la stella: marea, vento, aria, acqua, onde, pressione, luna
+  function queenInfo(r) {
+    if (!r.b || !r.d) return '';
+    var d = r.d, c = E.conditions(d, r.t), env = r.f.env === 'fresh' ? 'fresh' : E.envOf(d, r.f.env), rows = [];
+    if (env === 'sea') {
+      var ex = E.tideExtremes(d, r.t, r.t + 13 * H).slice(0, 2);
+      if (ex.length) rows.push(['Marea', ex.map(function (e) { return (e.type === 'alta' ? '\u25B2 ' : '\u25BC ') + favHHMM(d, e.t); }).join('  ')]);
+      var sp2 = tideSpark(d, r.t); if (sp2) rows.push(['', sp2]);
+    }
+    if (c.wind != null) rows.push(['Vento', E.windName(c.wdir) + ' ' + Math.round(c.wind) + ' km/h' + (c.wside ? ' \u00B7 ' + WSIDE[c.wside] : '')]);
+    rows.push(['Aria', Math.round(c.temp) + '\u00B0C' + (c.forecast ? '' : ' (media)')]);
+    var wt = env === 'sea' ? c.sst : c.freshT;
+    if (wt != null) rows.push(['Acqua', wt.toFixed(1) + '\u00B0C' + ((env === 'sea' ? c.sstEst : c.freshEst) ? ' (media)' : '')]);
+    if (env === 'sea' && c.wave != null) rows.push(['Onde', c.wave.toFixed(1) + ' m']);
+    if (c.press != null) rows.push(['Pressione', Math.round(c.press) + ' ' + E.pressLabel(c.press).toLowerCase()]);
+    rows.push(['Luna', moonSvg(c.moon.phase, 12, d.lat) + ' ' + c.moon.name]);
+    return '<dl class="qinfo">' + rows.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl>';
+  }
+  var WSIDE = { mare: 'da mare', terra: 'da terra', lato: 'lungo costa' };
   var ENVN = { sea: 'Mare', fresh: 'Acqua dolce' }, SPOTN = { shore: 'riva', boat: 'barca' };
   function renderFavs() {
     var box = $('favs');
     var q = S.queen ? Object.assign({ f: S.queen, idx: 'q' }, favBest(S.queen)) : null;
     var rest = [];
     S.favs.forEach(function (f, i) { if (f) rest.push(Object.assign({ f: f, idx: i }, favBest(f))); });
-    if (!q && !rest.length) { box.className = 'favs n1'; box.innerHTML = '<div class="muted">Nessun posto preferito. Premi Modifica per aggiungerne.</div>'; return; }
+    $('favFoot').hidden = !q && !rest.length;
+    var emptyFav = !q && !rest.length;
+    if (emptyFav && !favOpened) $('wFav').classList.add('min');
+    $('favTitle').textContent = emptyFav && $('wFav').classList.contains('min') ? 'Posti preferiti \u2014 tocca qui per aggiungerli' : 'Posti preferiti';
+    if (!q && !rest.length) {
+      box.className = 'favs n1';
+      box.innerHTML = $('favEditor').hidden ? '<div class="favempty"><span class="muted">Nessun posto preferito.</span><button class="btn raised" id="favAddBtn">+ Aggiungi un posto</button></div>' : '';
+      var ab = $('favAddBtn'); if (ab) ab.onclick = function (e) { e.stopPropagation(); $('favEditBtn').click(); };
+      return;
+    }
     function info(r) {
       var col = r.b ? COLORS[r.b.label] : T.muted;
       var pct = r.b ? r.b.pct + '%' : (r.st === 'err' ? '!' : '…');
       var name = r.b ? (r.b.pct < 15 && !r.f.fish ? 'Nessun pesce attivo' : r.b.name) : (r.st === 'err' ? 'Dati non disponibili' : 'Caricamento…');
-      return { col: col, pct: pct, name: name, env: ENVN[r.f.env] + ' · ' + (r.f.env === 'sea' ? SPOTN[r.f.spot || 'shore'] : 'riva') + (r.f.fish ? '' : ' · il più attivo') };
+      var whenTxt = r.b && favMode ? (favMode === 1 ? 'domani' : 'dopodomani') + ' alle ' + favHHMM(r.d, r.t) : '';
+      return { when: whenTxt, col: col, pct: pct, name: name, env: ENVN[r.f.env] + ' · ' + (r.f.env === 'sea' ? SPOTN[r.f.spot || 'shore'] : 'riva') + (r.f.fish ? '' : ' · il più attivo') };
     }
     function cur(r) { return fkey(r.f) === fkey(S.place) ? ' cur' : ''; }
     function hero(r, crown) {
       var x = info(r);
-      return '<div class="fav hero sunken' + cur(r) + '" data-fav="' + r.idx + '">' + (crown ? '<div class="crown">★ REGINA</div>' : '') +
+      return '<div class="fav hero sunken' + cur(r) + '" data-fav="' + r.idx + '">' + (crown ? '<div class="crown" title="Preferito principale">★</div>' : '') +
         '<div class="pl">' + esc(r.f.name) + '</div><div class="env">' + x.env + '</div>' +
         '<div class="pct" style="color:' + x.col + '">' + x.pct + '</div><div class="sp"><b>' + x.name + '</b>' + (r.b ? '<br><span class="muted">' + r.b.type + '</span>' : '') + '</div>' +
-        (r.b ? '<div class="prog sm"><i style="width:' + r.b.pct + '%"></i></div><div style="color:' + x.col + ';font-weight:bold">' + r.b.label + '</div>' : '') + '</div>';
+        (x.when ? '<div class="when">' + x.when + '</div>' : '') + (r.b ? '<div class="prog sm"><i style="width:' + r.b.pct + '%"></i></div><div style="color:' + x.col + ';font-weight:bold">' + r.b.label + '</div>' : '') + (crown ? queenInfo(r) : '') + '</div>';
     }
     function small(r) {
       var x = info(r);
-      return '<div class="fav small sunken' + cur(r) + '" data-fav="' + r.idx + '"><div class="pl">' + (r.idx + 1) + '. ' + esc(r.f.name) + '</div><div class="env">' + x.env + '</div><div class="sp">' + x.name + '</div><div class="pct" style="color:' + x.col + '">' + x.pct + '</div></div>';
+      return '<div class="fav small sunken' + cur(r) + '" data-fav="' + r.idx + '"><div class="pl">' + (r.idx + 1) + '. ' + esc(r.f.name) + '</div><div class="env">' + x.env + '</div><div class="sp">' + x.name + (x.when ? ' <span class="when">' + x.when.replace(/^\S+ /, '') + '</span>' : '') + '</div><div class="pct" style="color:' + x.col + '">' + x.pct + '</div></div>';
     }
     var first = q || rest.shift();
     box.className = 'favs' + (rest.length ? '' : ' n1');
@@ -1078,7 +1395,7 @@ var PescaEngine = (function () {
       '<div class="listbox sunken fres" data-k="' + key + '" hidden></div></div>';
   }
   function renderFavEditor() {
-    var h = favRow(S.queen, 'q', '★ Regina:');
+    var h = favRow(S.queen, 'q', '★');
     for (var i = 0; i < 4; i++) h += favRow(S.favs[i], i, (i + 1) + '.');
     $('favEditor').innerHTML = h;
   }
@@ -1119,7 +1436,7 @@ var PescaEngine = (function () {
     var trend = c.dp3 == null ? '' : c.dp3 < -0.6 ? ' in calo' : c.dp3 > 0.6 ? ' in aumento' : ' stabile';
     var tiles = [
       { t: 'Marea', v: c.sea != null ? sgn(c.sea) + ' m' : '–', sub: c.rate == null ? '' : (c.rate > 0.01 ? '↗ crescente' : c.rate < -0.01 ? '↘ calante' : '→ stanca'), a: s.sea, col: T.acc, hide: env !== 'sea' },
-      { t: 'Vento', v: c.wind == null ? 'n.d.' : Math.round(c.wind) + ' km/h', sub: c.wind == null ? '' : 'da ' + E.windName(c.wdir) + ' · raffiche ' + Math.round(c.gust), a: s.wind, a2: s.gust, col: T.acc, col2: T.t2 },
+      { t: 'Vento', v: c.wind == null ? 'n.d.' : Math.round(c.wind) + ' km/h', sub: c.wind == null ? '' : 'da ' + E.windName(c.wdir) + (c.wside ? ' (' + WSIDE[c.wside] + ')' : '') + ' · raffiche ' + Math.round(c.gust), a: s.wind, a2: s.gust, col: T.acc, col2: T.t2 },
       { t: 'Temperatura', v: c.temp == null ? '–' : fx(c.temp, 1) + '°', sub: 'aria' + (env === 'sea' ? ' · acqua ' + fx(c.sst, 1) + '°' : ' · acqua ~' + fx(c.freshT, 0) + '°'), a: s.temp, a2: env === 'sea' ? s.sst : null, col: COLORS.SCARSO, col2: '#4a8fd0' },
       { t: 'Pressione', v: c.press == null ? 'n.d.' : Math.round(c.press) + ' hPa', sub: '<span class="badge" style="background:' + pcol + '">' + pl + '</span>' + trend, a: s.press, col: COLORS.BUONO },
       { t: 'Onde', v: c.wave == null ? '–' : fx(c.wave, 1) + ' m', sub: c.wave == null ? '' : c.wave < 0.3 ? 'mare calmo' : c.wave < 0.8 ? 'poco mosso' : c.wave < 1.5 ? 'mosso' : 'agitato', a: s.wave, col: T.acc, hide: env !== 'sea' },
@@ -1153,11 +1470,14 @@ var PescaEngine = (function () {
     var curve = E.dayCurve(data, mid, S.target, S.type, S.env), best = E.bestWindow(curve);
     $('vWhen').innerHTML = dayLong(sel) + ', ore ' + hhmm(sel) + (c.forecast ? '' : ' <span class="tag">stima</span>') +
       '<br>' + (best.pct < 15 ? 'Oggi nessuna fascia oraria buona per questa specie.' : 'Migliore della giornata: <b>' + pad(best.from) + ':00–' + pad(best.to % 24) + ':00</b> (' + best.pct + '%)');
+    if (broadNote) $('vWhen').insertAdjacentHTML('afterbegin', '<span class="tag">' + esc(broadNote) + '</span><br>');
     $('vWhy').innerHTML = me.why.map(function (w) {
       return '<li class="' + (w[0] === '+' ? 'p' : 'm') + '"><b>' + (w[0] === '+' ? '+' : '−') + '</b>' + w[1] + '</li>';
     }).join('') || '<li class="muted">Condizioni nella media.</li>';
 
-    $('spList').innerHTML = all.map(function (r) {
+    var envHere = E.envOf(data, S.env);
+    var here = function (id) { var x = sp(id); if (x.hab !== 'both' && x.hab !== envHere) return false; var pi = E.presenceInfo(S.place.lat, S.place.lon, id); return pi.v > 0 || pi.user; };
+    $('spList').innerHTML = all.filter(function (r) { return here(r.id) || r.id === S.target; }).map(function (r) {
       return '<tr data-id="' + r.id + '"' + (r.id === S.target ? ' class="sel"' : '') + '><td>' + r.name + '</td><td class="bar"><div class="prog sm"><i style="width:' + r.pct + '%"></i></div></td><td class="n"><b class="vl" style="color:' + COLORS[r.label] + '">' + r.pct + '</b></td></tr>';
     }).join('');
 
@@ -1166,7 +1486,7 @@ var PescaEngine = (function () {
       ['Cielo', c.forecast ? E.skyName(c.code) : 'n.d. (oltre 16 gg)'],
       ['Nuvole', c.cloud == null ? '–' : Math.round(c.cloud) + '%'],
       ['Alba / tram.', sun],
-      ['Luna', c.moon.name + ' (' + Math.round(c.moon.illum * 100) + '%)']
+      ['Luna', moonSvg(c.moon.phase, 14, S.place.lat) + ' ' + c.moon.name + ' (' + Math.round(c.moon.illum * 100) + '%)']
     ].map(function (r) { return '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; }).join('');
 
     var l = L(sel);
@@ -1183,6 +1503,79 @@ var PescaEngine = (function () {
     drawTide(mid, env);
     renderSparks(c, mid, env);
     renderFavs();
+  }
+
+  // ---------- luna: icona della fase (a sud dell'equatore la parte illuminata è girata) ----------
+  function moonSvg(p, size, lat) {
+    var r = 7, k = Math.cos(2 * Math.PI * p), wax = p < 0.5;
+    if (lat < 0) wax = !wax;
+    var s1 = wax ? 1 : 0, s2 = wax ? (k > 0 ? 0 : 1) : (k > 0 ? 1 : 0), rx = Math.abs(k) * r;
+    var lit = p > 0.03 && p < 0.97 ? '<path d="M0,-' + r + ' A' + r + ',' + r + ' 0 0 ' + s1 + ' 0,' + r + ' A' + rx.toFixed(2) + ',' + r + ' 0 0 ' + s2 + ' 0,-' + r + 'Z" fill="#f4efd8"/>' : '';
+    return '<svg class="moon" width="' + size + '" height="' + size + '" viewBox="-8 -8 16 16" aria-hidden="true"><circle r="' + r + '" fill="#2b2f3a"/>' + lit + '<circle r="' + r + '" fill="none" stroke="#000" stroke-width="1"/></svg>';
+  }
+  var MOON_KEY = [[0, 'Luna nuova'], [0.25, 'Primo quarto'], [0.5, 'Luna piena'], [0.75, 'Ultimo quarto']];
+  // la fase principale (nuova, quarti, piena) che cade in quel giorno, se c'è
+  function moonEvent(t0) {
+    var a = E.moon(t0).phase, b = E.moon(t0 + D).phase;
+    for (var i = 0; i < 4; i++) { var q = MOON_KEY[i][0]; var a1 = (a - q + 1) % 1, b1 = (b - q + 1) % 1; if (a1 > 0.5 && b1 < 0.5) return { p: q, name: MOON_KEY[i][1] }; }
+    return null;
+  }
+
+  // ---------- mappamondo pixelato: gira fino al posto scelto e zooma un po' ----------
+  var LAND = (function () { var b = atob('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+//8/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P////8HAAAA8P//////PwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+//////8HAAA+/P///z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP7//////wf4////////////D/AfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPD//////wf8////////////+/9/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/sP/////f/D///////////////8BAAAAAAAAAAAAAAAAAADgPQAAAAAAAAAAAAD+DwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA//8B/P//D/7//////////////wcAAAAAAAAAAPj/HwAAAADgAwAAAAAAAAAAAAD/PwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA///7////AOD//////////////wcAAAAAAADAxw//HwAAAAAAAAAAAAAAAAAAAAD8/wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYAAA4P/P//8AAPz//////////////wMAAAAAAADA//8AAAAAAAAAAAAAAAAAAAAAAADw/zgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHgH948P/8//8A+P///////////////wEAAAAAAACA//8AAAAAAAAAAAAAAAAAAAAAAAAAAP4DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPj4AQ78///A/////////////////wEAAAAAAAAA/j88AAAAAAAAAAAAAAAAAAAAAAAAAP8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAPAACADwDn/w8A/v///////////////wEAAAAAAAAA4A/8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfwAAAAAAAAD//wEA4P///////////////wMAAAAAAAAA8AcAAAAAAAAAAAAAAAAAAAAAAAAAAPAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADgfwAgAADA/+H//w8A+P//////////////PwAAAAAAAAAAAAAAAAAAAAAAAAAAAPABAAAAAAAAAPw/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4Ax/wAPgf4AMAwAAAwP//////////////fwAAAAAAAAAAAAAAAAAAAAAAAAAA/P8AAAAAAAAA8P///wMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP/hD/gfwB8ADgAAAAAA/v///////////wEAAAAAAAAAAAAAAAAAAAAAAADg/wEAAAAAAAD+/////w8AAAAAAPj/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4P//D8CPj////wAAAAAA+P///////////wEAAAAAAAAAAAAAAAAAAAAAAAD+BwAAAAAAAP7//////wcAAAAAAPz/8wMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAHAAAAD/7//wAAAAAA4P///////////wAAAAAAAAAAAAAAAAAAAAAAAAD/AAAAAAAA4P//////fwAAAAAAAOAAAA4AAAAAAAAAAAAAAAAAAAAAAAAAAMD/AAAAAAAAAAAAAAAAAAAAwP//////////PwAAAAAAAAAAAAAAAAAAAAAAAMAfAAAAAAAA4P//////BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//wAAAIAA/gcIgAAAAAAAAP//////////fwAAAAAAAAAAAAAAAAAAAAAAAPgHAAAAAAD4/////////wMAAAAAAAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID/fwIAeOAf/8HHnz8AAAAAAP7/////////AQAAAAAAAAAAAAAAAAAAAAAAAPgDAAAAAAD+//////////8/wP8AAAB4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAMD/5/cYH7g/P/DvfwAAAAAAAPz/////////BwAAAAAAAAAAAAAAAAAAAAAAAP4AAAD8YQD+//////////////8DAAAPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD/+f9/P+B/DvD/f/4BAAAAAPz///////9/AAAAAAAAAAAAAAAAAAAAAAAAAH4AAAD8Q/j8//////////////8DAID//wMAAAAAAAAAAAAAAAAAAAAAAAAAAOB//P9/PwB/DvD///8PAAAAAP7/////////BwAAAAAAAAAAAAAAAAAAAAAAgH8AAAD/cP////////////////8DAYD//w8AAAAAAAAAHwAAAADAAAAAAAAAAAAegP//fwCAP/D/////AQAAAMD////////fDwAAAAAAAAAAAAAAAAAAAAAAAPwBAMD/+P7///////////////+H/////38AAAAAAADAAAAAAAD+9wAAAAAAAAAA8P///wGA/+D/////DwAAADj///////8/DwAAAAAAAAAAAAAA/w8AAAAAAPAHAOD/8f//////////////////////////PwAAAAAAAAAAAPD///8AAAAAAAMAAOD//w+A/wH8/////wAAAPj///////8HAAAAAAAAAAAAAADA/x8AAAAAAAAAAMD/8////////////////////////////wAAAAAAAAAAAPz/////HwAA/0ccwP///z88fgDgIeD//wEAAPj9////////AQAAAAAAAAAAAMD//78BAAAAAAAABsD/+f//////////////////////////fwAA8P8BAAAAAP7//////wf/////A/3//wf++AfgH4D//wMAAAD8//////8/AAAAAAAAAAAAAPD///8fAAAAAAAA/gP/8f//////////////////////////////4f8/AQAA+P///////////////+MfCAAA+HfgPwD/fwAAAAD+//////8DAAAAAAAAAAAAAPz/////BwAAABgg/B/8w///////////////////////////////9///HwAA+P///////////////weAPwD4+P/wDwDw/wMAAMD//////x8AAAAAAAAAAAAAgP//////PwAfwMf////+5///////////////////////////////////fwAAgP///////////////w8f/4/////4H8DD/38AAOD/////PwAAAAAAAAAAAAAA4P///////wE//P//////w////////////////////////////////////wMAAP//////////////////////////H8CB//8AAPD/////HwAAAAAAAAAAAAAA8P///////wMH////////8f////////////////////////////////////sBAPj/////////////////////////BwDg//8PAOD/////DwAAAAAAAAAAAAAA+P///////wPO////////8P////////////////////////////////////8H8PH///////////////////////8PAADw//gPAOD/////AQAADsAHAAAAAAAA/P////8P/Hj//////////v///////////////////////////////////P8H//////////////////////////8HAADw/+ADAMD///8PAAAA//8HAAAAAAAA//8f/v8/AP7/////////////////////////////////////////////AX8A/P/////////////////////////zAPD//4EBAID///8AAAAA8P8PAAAAAACA//8H+P8/AP//////////////////////////////////////////////AHwA+N/////////////////////////xB/j//w8AAAD//38AAAAA/v8HAAAAAADA//8H/v8/Hv7///////////////////////////////////////////9/AAAAAMD////////////////////////4HxDg/z8AAAD//38AAAAA8P8BAAAAAADw//+D//9//P////////////////////////////////////////////8PAAAAAMD//////////////////////wf8+AAA/z8AAAD+/z8AAAAAwB8AAAAAAAD8///g//////////////////////////////////////////////////8fAAB4APj//////////////////////wcgAAAA/3wAAAD8/x8AAAAAAAAAAAAAAAD//z/4//////////////////////////////////////////////////8/AAAAwP///////////////////////wAADgAA+CMAAAD4/wcAAAAAAAAAAAAAAOD//w/8//////////////////////////////////////////////////9/AAAA4P//////////////////////PwAAA/EZgAcAAADw/wcAAAAAAAAAAAAAAPj//wf4/////////////////////////////////////////////z/+//8BAAAA8P//////////////////////HwAAAPH/AAAAAADg/wcAAAAAAAAAAAAAAPz//wf4////////////////////////////////////////////vx///x8AAAAA4P//////////////////////DwAAAPD/AQAAAADA/wMAAAAAAAAAAAAAAPz//wP4////////////////////////////////////////////gY///wMAAAAA4P////74////////////////BwAAAPD/HwAAAAAA8AMAAAAAAAAAAAAAAPz//wf4//////////////////////////////////////////9/AMH/fwAAAAAAnP//f/7A////////////////BwAAAOD/HwAAAAAAwAEAAAAAAAAAAAAAAPz//x/gB/7///////////////////////////////////////8/APj/GAAAAAAAAPD/Px8AwP//////////////BwAAAOD/H+AAAAAAAAAAAAAAAAAAAAAAAPj//x8AAP7///////////////////////////////////////8PAHwCAAAAAAAAAPD/DwIAAP7/////////////BwAAAPD/H/ABAAAAAAAAAAAAAAAAAAAAAPjv/w+A////////////////////////////////////////wYM/AD8AAAAAAAAAADDeHwAAAPj/////////////PwAAAPj/f/ADAAAAAAAAAAAAAAAAAAAAAPjD/wOA//////////////////////////////////////8HAAAAgB8AAAAAAAAAAADgDwAAAMD/////////////PwAAAOD///8HAAAAAAAAAAAAAAAAAOABAOCA/wEA/v////////////////////////////////////8DAAAA4A8AAAAAAAAAAADgcQAAAADw////////////fwAAAMD///8PAAAAAAAAAAAAAAAAAPAAAACA/wEA/v////////////////////////////////////8AAAAA/B8AAAAAAAAAAAB4OAAAAADg////////////fwQAAID///8fAAAAAAAAAAAAAAAAAPAPAAAY/wE4/////////////////////////////////////z8AAAAA/j8AAAAAAAAAAAAeAAAAAADA/////////////z8AAID///8fAAAAAAAAAAAAAAAAAPAHAAAf/gH8/////////////////////////////////////x8AAAAA/z8AAAAAAAAAAIAHAAAAAAAA//////////////8BAMD///8fAAAAAAAAAAAAAAAAAOADAAA//gD8/////////////////////////////////////wcAAACA/z8AAAAAAAAAAPADAAAAAAAA//////////////8PAMD///9/AAAAAAAAAAAAAAAAAOAPAADPHQD8/////////////////////////////////////wMAAACA/w8AAAAAAAAAABwAAAAAAAAA/v//////////////AfD/////AQAAAAAAAAAAAAAAAMAfAACOAQD4/////////////////////////////////////wAAAACA/wcAAAAAAAAAgAMAAAAAAAAA+P//////////////B/7/////HwAAAAAAAAAAAAAAAI8/AAAOAAz/////////////////////////////////////PwAAAACA/w8AAAAAAAAAAAAAAAAAAAAA+P//////////////B/7/////PwAAAAAAAAAAAAAAwA98AAA+g////////////////////////////////////////wMAAACA/wEAAAAAAAAAAAAAAAAAAADA4P//////////////B/z/////PwAAAAAAAAAAAAAA4A/8AAD+//////////////////////////////////////////8hAAAA/wAAAAAAAAAAAAAAAAAAAADAwP//////////////D/z//////wAAAAAAAAAAAAAA4I//APz///////////////////////////////////////////87AAAA/wAAAAAAAAAAAAAAAAAAAACAwP//////////////D/j//////wEAAAAAAAAAAAAA4If/B/7///////////////////////////////////////////9/AAAAHwAAAAAAAAAAAAAAAAAAAAAAAP//////////////H/z//////wEAAAAAAAAAAAAA4IP/B/////////////////////////////////////////////8/AAAAHgAAAAAAAAAAAAAAAAAAAAAAAP//////////////P/z/////fwAAAAAAAAAAAAAAYMD/A/////////////////////////////////////////////87AAAADgAAAAAAAAAAAAAAAAAAAAAAAP7/////////////////////zwEAAAAAAAAAAAAAAAD/x/////////////////////////////////////////////9xAAAAAgAAAAAAAAAAAAAAAAAAAAAAAPz/////////////////////4QAAAAAAAAAAAAAAAMA/+P////////////////////////////////////////////9xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///////////////////w/+YAAAAAAAAAAAAAAAAGAB+P/////////////////////////////////////////////xAAAAAAAAAAAAAAAAAAAAAAAAAAAAALz//////////////////4MD8AEAAAAAAAAAAAAAAAAA///////////////////////////////////////////////xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHD+/////////////////wAM+B8AAAAAAAAAAAAAAADw//////////////////////////////////////////////+xAQAAAAAAAAAAAAAAAAAAAAAAAAAAAOD5////////////////P/4A/B8AAAAAAAAAAAAAAADn//////////////////////////////////////////////8wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID4////////////////nz8A/D8AAAAAAAAAAAAAAID///////////////////////////////////////////////8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID7////////////////7z8A/j8AAAAAAAAAAAAAAAD+/////////////////////////////////////////////38QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/////////////////9z8AADIAAAAAAAAAAAAAAAD4/////////////////////////////////////////////z8wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////////////8AADAAAAAAAAAAAAAAAADw////////////8///H/z//////////////////////////x9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//////////////////39OAAAAAAAAAAAAAAAAAADg/////////x8+8P//A/z//////////////////////////w8QAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/////////////////////AAAAAAAAAAAAAAAAAADA/////////w84+P//Afz//////////////////////////wcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//////////////////48/AAAAAAAAAAAAAAAAAADg////+f///wf+//9/gP///////////////////////////wMQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//////////////////+MDAAAAAAAAAAAAAAAAAADg////wf///wM4+P8/gP///////////////////////////wE4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/////////////////f3AAAAAAAAAAAAAAAAAAAADg///9wf///wEA4P8/4P///////////////////////////wB4BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/////////////////DzAAAAAAAAAAAAAAAAAAAADg///gg////wEAgP9/wP//////////////////////////fwD4BwAAAAAAAAAAAAAAAAAAAAAAAAAAAID/////////////////BwAAAAAAAAAAAAAAAAAAwP///xjgB/z//wAAAP9/gP//////////////////////////HgD+BwAAAAAAAAAAAAAAAAAAAAAAAAAAAID/////////////////AwAAAAAAAAAAAAAAAAAAwP//PwDkD/D//wAAAPh/AP7///////////////////////9/AAD/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAID/////////////////AwAAAAAAAAAAAAAAAAAAwP//PwCGH8D//wAAAPj/AP7///////////////////////8/AABnAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD/////////////////DwAAAAAAAAAAAAAAAAAAwP//PwAG/4D//wD+APj/AfL///////////////////////8PAAADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////////9/AAAAAAAAAAAAAAAAAAAAwP//DwAA/IH//4P/A/z/A+D///////////////////////8HAAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID///////////////8/AAAAAAAAAAAAAAAAAAAAwP//AQAH8If/cPz/////B/T/////////////////////8/8HAAAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID///////////////8PAAAAAAAAAAAAAAAAAAAAwP//AAAOwJHfwf//////H/z/////////////////////8P8BAAAPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////////8PAAAAAAAAAAAAAAAAAAAAwP//AAAGgAE/4P//////B/j///////////////////9/eH4AAAAPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////////8FAAAAAAAAAAAAAAAAAAAA4P//AAAGAAN+4P//////B/z///////////////////8/GHgAAAAPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+//////////////8DAAAAAAAAAAAAAAAAAAAA4P//AAAAAAE+4P//////A/D///////////////////8HAPwAAIAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8/////////////38DAAAAAAAAAAAAAAAAAAAAwP9/AAAAgAH84P//////A/D///////////////////8PAPwBAIADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4/////////////38BAAAAAAAAAAAAAAAAAAAAwP9/AAAAfgC4wP//////A/D///////////////////8/AvADAOADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4/////////////38AAAAAAAAAAAAAAAAAAAAAwP8fAAAMeAA4gP//////H/D///////////////////9/H+AHAPIDAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADw//////////////8AAAAAAAAAAAAAAAAAAAAAAPgPwPs/AAAwgP/f//////7/////////////////////B/AHAP4DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADw//////////////8AAAAAAAAAAAAAAAAAAAAAADAA/v8fAAAAABgO////////////////////////////A+AHAP8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg//////////////8AAAAAAAAAAAAAAAAAAAAAADDA//8/AAAAAAAA////////////////////////////AOAHAP8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADA//////////////8AAAAAAAAAAAAAAAAAAAAAAPDz//8/AACAHwAM//////////////////////////9/AOAD/v8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA/////////////38AAAAAAAAAAAAAAAAAAAAAAPj///8fAAAAAAAG//////////////////////////9/AOAA/z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v///////////x8AAAAAAAAAAAAAAAAAAAAAAPz///8PAAAAAACA////////////////////////////AQDA0wMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P///////////wcAAAAAAAAAAAAAAAAAAAAAAP7///8/AAAAAACA////////////////////////////AQAgngAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4P///////////wMAAAAAAAAAAAAAAAAAAAAAgP////8/AAAAAADA////////////////////////////AQD4BgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP///////////wAAAAAAAAAAAAAAAAAAAAAAwP//////BwAMAADA////////////////////////////AwD4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP//////////fwAAAAAAAAAAAAAAAAAAAAAA4P//////fwA/AADA////////////////////////////BwBgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwPv/////////PwAAAAAAAAAAAAAAAAAAAAAA4P//////fwD/AwDg////////////////////////////DwBgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgOP/////////HwAAAAAAAAAAAAAAAAAAAAAA8P///////wH/f/Dg////////////////////////////DwAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMf/////////HwAAAAAAAAAAAAAAAAAAAAAA4P///////w//////////////////////////////////BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMf//////x/wHwAAAAAAAAAAAAAAAAAAAAAA4P//////////////////////////////////////////BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIb/////3x8gPgAAAAAAAAAAAAAAAAAAAAAA4P//////////////////4P//////////////////////DwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIz/////AwwAPAAAAAAAAAAAAAAAAAAAAAAA8P/////////////f////4P//////////////////////DwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABj/////AQAAfAAAAAAAAAAAAAAAAAAAAAAA/P/////////////d////wf//////////////////////DwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADD+//9/AAAAeAAAAAAAAAAAAAAAAAAAAAAA/v/////////////7////gf//////////////////////BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHz4//8/AAAAfAAAAAAAAAAAAAAAAAAAAADA//////////////+H////A///////////////////////AwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHj4//8fAAAA+AAAAAAAAAAAAAAAAAAAAADg//////////////+H////B/z/////////////////////AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAODx//8fAAAA+AwAAAAAAAAAAAAAAAAAAADg//////////////8P////D3j8////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAIDh//8fAAAA8CAAAAAAAAAAAAAAAAAAAAD4//////////////8P/v//DwD9////////////////////AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADh//8/AAAA4AAAAAAAAAAAAAAAAAAAAAD4//////////////8f/v//TwD5//////////////////9/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACD//8fAAAAQAAAAAAAAAAAAAAAAAAAAAD8//////////////8f/P//X8AB/uH///////////////8/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH//8fAAAAABgAAAAAAAAAAAAAAAAAAAD8//////////////8//P//f+ABAMD///////////////8/DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAO/v8fAAAAABAAAAAAAAAAAAAAAAAAAAD+//////////////9/+P////ADAID///////////////8PBgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAY/P8fAAAAABAAAAAAAAAAAAAAAAAAAAD///////////////9/4P////8PAAD///////////////8HBwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQ+P8PAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////////9/4P////8/AAD8//////////////8BBwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8P8PAAAA/wEAAAAAAAAAAAAAAAAAAID/////////////////wP////9/AAD4/////5///////38AAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4P8PAACA8Q8AAAAAAAAAAAAAAAAAAID/////////////////wf//////AAD4/////x///////wcAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4P8fAAAAAB8AAAAAAAAAAAAAAAAAAMD/////////////////w/////9/AAD4/////wP//////wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4P8fAOADAHgAAAAAAAAAAAAAAAAAAMD/////////////////w/////8/AADw////PwD///9/EAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAA4P8/APgDAPABAAAAAAAAAAAAAAAAAMD/////////////////g/////8fAAAA/P//PwD+//8/GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4P8/APgBAOAPAAAAAAAAAAAAAAAAAID/////////////////A/////8PAAAA/P//HwD+//8fAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAA4P9/APgBAADgBgAAAAAAAAAAAAAAAID/////////////////A/7///8HAAAA/P//BwD4//8PPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAwP//APwBAADAPwAAAAAAAAAAAAAAAID/////////////////B/z///8PAAAA/P//AwD4//8HHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//Af8BAACAfwAAAAAAAAAAAAAAAAD/////////////////B/z///8DAAAA/P//AQDw//8PHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP7/9/8AAHj4SxwAAAAAAAAAAAAAAAD/////////////////D/j///8BAAAA/P//AADg//8PAAAAHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPD///8AACAAAAAAAAAAAAAAAAAAAAD/////////////////H/D//38AAAAA/P9/AADg//8fAAAADgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMD//38AAAAAAAAAAAAAAAAAAAAAAID/////////////////P+D//38AAAAA+P8fAADg//8/AAAAHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//38AAAAAAAAAAAAAAAAAAAAAAID/////////////////P+D//wcAAAAA+P8PAADg+/9/AAAAHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4/38AAAAAAAAAAAAAAAAAAAAAAID/////////////////P8D//wEAAAAA+P8HAADw+P//AAAADgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADA4H//AAAAAAAAAAAAAAAAAAAAAID/////////////////f+D//wAAAAAA+P8BAABA+P//AQAABwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP//AQAAAAAAAAAAAAAAAAAAAMD//////////////////8D/fwAAAAAA8P8AAAAA+P//AwAABwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgP//AQAAAAAAAAAAAAAAAAAAAOD//////////////////8P/BwAAAAAA4P8AAAAA8P//AwAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP//AwAAAAAAAAAAAAAAAAAAAMD//////////////////8f/AwAAAAAA4P8AAAAA8P//AwAALgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPD/AQAAAAAAAAAAAAAAAAAAAMD//////////////////49/AAAAAAAA4P8AAAAA8P//BwAA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMD+AQAAAAAAAAAAAAAAAAAAAMD//////////////////98HAAAAAAAAwP8BAAAA4Pz/BwAAxgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+AQAAAAAAAAAAAAAAAAAAAMD//////////////////78DAAAAAAAAwP8AAAAA4Pz/BwAAhAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8AQAAAQAAAAAAAAAAAAAAAID//////////////////38AAAAAAAAAwP8AAAAA4OD/AwAABAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4AQCAGQAAAAAAAAAAAAAAAID//////////////////x8AIAAAAAAAgP8AAAAA4MD/AwAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAADweAAAAAAAAAAAAAAAAAD+/////////////////38APwAAAAAAAP8AAAAAYMD/AQAAMAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADgAQD+/wAgAAAAAAAAAAAAAAD8///////////////////wPwAAAAAAAP8AAAAAYID/AABA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwAQD+/p83AAAAAAAAAAAAAAD4////////////////////PwAAAAAAAH8AAAAAYAA+AABAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACgBwD+/P8fAAAAAAAAAAAAAADw////////////////////HwAAAAAAAD4AAAAAIAAcAAAgYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADw///P8/AAAAAAAAAAAAAADg////////////////////HwAAAAAAAD4DAAAAIAAMAAAQAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/pn///9/AAAAAAAAAAAAAADA////////////////////HwAAAAAAAA4DAAAA8AAEAAAAAB4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAePD/////AQAAAAAAAAAAAADA////////////////////DwAAAAAAAIgHAAAA8AEAAAAAwB8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4Pj/////AwAAAAAAAAAAAADA////////////////////DwAAAAAAAAAHAAAAwAEAAAAA8B8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQPD/////BwAAAAAAAAAAAACA////////////////////BwAAAAAAAAAHAAAAgAEAAAAAEB8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD/////DwAAAAAAAAAAAAAA/v//////////////////BwAAAAAAAAAHAAAAAAcAAAAGABcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD/////HwAAAAAAAAAAAAAA/P//H/7/////////////AwAAAAAAAAAHAAAAAA8AAAAGAAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD//////w8AAAAAAAAAAAAA8P//Afz/////////////AwAAAAAAAAAAAAAAAB4AAAAfAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD//////38AAAAAAAAAAAAA4P9/APz/////////////AQAAAAAAAAAAAACABz8AAMA/AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD///////8AAAAAAAAAAAAAwAcAAPj/////////////AAAAAAAAAAAAAACAD34AAOAfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD///////8BAAAAAAAAAAAAAAAAAAD8////////////AAAAAAAAAAAAAAAAH34AAPAPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMD///////8DAAAAAAAAAAAAAAAAAAD4//////////9/AAAAAAAAAAAAAAAAPnwAAPgHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD///////8DAAAAAAAAAAAAAAAAAAD4//////////8/AAAAAAAAAAAAAAAAfHgAAPwHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPD///////8DAAAAAAAAAAAAAAAAAAD4//////////8fAAAAAAAAAAAAAAAA+HgAgP8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPj///////8HAAAAAAAAAAAAAAAAAAD4//////////8PAAAAAAAAAAAAAAAA8PEAgP8PAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPj///////8PAAAAAAAAAAAAAAAAAAD4//////////8DAAAAAAAAAAAAAAAA4M8AyP8PAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPz///////8PAAAAAAAAAAAAAAAAAAD4//////////8BAAAAAAAAAAAAAAAAwJ8A/P8fAIIBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP////////8PAAAAAAAAAAAAAAAAAAD4/////////38AAAAAAAAAAAAAAAAAwD8A/P8P/4EBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP////////8HAAAAAAAAAAAAAAAAAAD4/////////z8AAAAAAAAAAAAAAAAAwH8A/P8HAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgP////////9/AAAAAAAAAAAAAAAAAAD8/////////x8AAAAAAAAAAAAAAAAAgH8A/P+HAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgP////////9/AwAAAAAAAAAAAAAAAAD8/////////w8AAAAAAAAAAAAAAAAAAH8A+P+HYQCBDwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP//////////HwAAAAAAAAAAAAAAAAD8/////////w8AAAAAAAAAAAAAAAAAAP4B+P+DHwDADwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP//////////fwAAAAAAAAAAAAAAAAD8/////////wcAAAAAAAAAAAAAAAAAAP4B8P+BDwAADxgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP//////////fwAAAAAAAAAAAAAAAAD4/////////wMAAAAAAAAAAAAAAAAAAPwD8P/BDwAAGH4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP///////////w8AAAAAAAAAAAAAAADw/////////wAAAAAAAAAAAAAAAAAAAPgP8P/BDQAAH/8HAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP////////////8BAAAAAAAAAAAAAADg/////////wAAAAAAAAAAAAAAAAAAAPAPAPvBHTAf/v8fAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgP////////////8HAAAAAAAAAAAAAADA/////////wAAAAAAAAAAAAAAAAAAAOAPAOCAHSAg9P//AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP////////////8PAAAAAAAAAAAAAACA////////fwAAAAAAAAAAAAAAAAAAAOAPAACAOQAAwP//A4ADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4P////////////8fAAAAAAAAAAAAAACA////////PwAAAAAAAAAAAAAAAAAAAIAPAACAKQAAAP7/B4ABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP//////////////AQAAAAAAAAAAAAAA////////PwAAAAAAAAAAAAAAAAAAAAAPAACAIQAAAPj/D8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP//////////////AwAAAAAAAAAAAAAA////////PwAAAAAAAAAAAAAAAAAAAAAOAAAAAAAAAPD/H34gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP//////////////AwAAAAAAAAAAAAAA////////PwAAAAAAAAAAAAAAAAAAAADwAAAAAAAAEOD/fxhAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgP//////////////AwAAAAAAAAAAAAAA/v//////fwAAAAAAAAAAAAAAAAAAAAD44QAAAAAAEOD/PwCAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP7/////////////AwAAAAAAAAAAAAAA/P//////fwAAAAAAAAAAAAAAAAAAAADg/wMAAAAAAOD/PwAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP7/////////////AwAAAAAAAAAAAAAA/P//////PwAAAAAAAAAAAAAAAAAAAAAA+R8AAAAAAPD/fQAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPz/////////////AwAAAAAAAAAAAAAA/P//////PwAAAAAAAAAAAAAAAAAAAAAAgH8AIAAAADh/8AAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPz/////////////AwAAAAAAAAAAAAAA/P//////fwAAAAAAAAAAAAAAAAAAAAAAAAA8DzwAAAB+4AEAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPj/////////////AQAAAAAAAAAAAAAA/P//////fwAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAAAgwAcAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPj/////////////AQAAAAAAAAAAAAAA/P///////wAAAAAAAAAAAAAAAAAAAAAAAACAgQMAAAAAgA8AAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPD/////////////AAAAAAAAAAAAAAAA+P///////wAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAAB4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPD///////////8/AAAAAAAAAAAAAAAA+P///////wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD///////////8/AAAAAAAAAAAAAAAA+P///////wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD///////////8fAAAAAAAAAAAAAAAA+P///////wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAABgAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMD///////////8PAAAAAAAAAAAAAAAA+P///////wEABAAAAAAAAAAAAAAAAAAAAAAAAABA/wMwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMD///////////8PAAAAAAAAAAAAAAAA/P///////wEABAAAAAAAAAAAAAAAAAAAAAAAAADg/wNwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID///////////8HAAAAAAAAAAAAAAAA/v///////wEADgAAAAAAAAAAAAAAAAAAAAAAAADg/wF4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID///////////8DAAAAAAAAAAAAAAAA/v///////wEADgAAAAAAAAAAAAAAAAAAAAAAAADw/wB4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////8DAAAAAAAAAAAAAAAA/////////wEADwAAAAAAAAAAAAAAAAAAAAAAAPj4/wD4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////////8DAAAAAAAAAAAAAAAA/////////wOADwAAAAAAAAAAAAAAAAAAAAAAAPz4fwD4AwAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+//////////8DAAAAAAAAAAAAAAAA/////////wHAHwAAAAAAAAAAAAAAAAAAAAAAAP7//wD4BwAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4//////////8DAAAAAAAAAAAAAAAA/////////wHgFwAAAAAAAAAAAAAAAAAAAAAAAP7//wP4BwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg//////////8DAAAAAAAAAAAAAACA/////////wD+DwAAAAAAAAAAAAAAAAAAAAAAgP7//wf4BwAAAABAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA//////////8DAAAAAAAAAAAAAACA////////fwD+DwAAAAAAAAAAAAAAAAAAAAAAoP///w/8BwAAAAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v////////8DAAAAAAAAAAAAAACA////////DwD/BwAAAAAAAAAAAAAAAAAAAAAA4P///z/8DwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v////////8DAAAAAAAAAAAAAAAA////////AwD/BwAAAAAAAAAAAAAAAAAAAAAA4P//////DwAAAAAAAAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P////////8BAAAAAAAAAAAAAAAA////////AQD/BwAAAAAAAAAAAAAAAAAAAAAA8P//////DwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P////////8BAAAAAAAAAAAAAAAA/v//////AAD/AwAAAAAAAAAAAAAAAAAAAAAA+P//////HwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8P////////8BAAAAAAAAAAAAAAAA/v////9/AAD+AwAAAAAAAAAAAAAAAAAAAAAA+P//////PwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8P////////8AAAAAAAAAAAAAAAAA/P////8/AAD+AwAAAAAAAAAAAAAAAAAAAAAA/v///////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8P///////38AAAAAAAAAAAAAAAAA/P////8fAAD+AQAAAAAAAAAAAAAAAAAAAADA/////////wEAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8P///////38AAAAAAAAAAAAAAAAA+P////8/AAD/AQAAAAAAAAAAAAAAAAAAAAD+/////////wMAAAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8P///////z8AAAAAAAAAAAAAAAAA+P////8/AID/AQAAAAAAAAAAAAAAAAAAAID//////////wcAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8P///////z8AAAAAAAAAAAAAAAAA8P////9/AID/AAAAAAAAAAAAAAAAAAAAAMD//////////wcAAAAYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8P///////x8AAAAAAAAAAAAAAAAA4P////9/AID/AAAAAAAAAAAAAAAAAAAAAOD//////////wcAAAAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P///////w8AAAAAAAAAAAAAAAAA4P////9/AID/AAAAAAAAAAAAAAAAAAAAAPD//////////z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P///////wAAAAAAAAAAAAAAAAAA4P////9/AIB/AAAAAAAAAAAAAAAAAAAAAPD//////////z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P//////HwAAAAAAAAAAAAAAAAAA4P////9/AIB/AAAAAAAAAAAAAAAAAAAAAPj//////////z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P//////BwAAAAAAAAAAAAAAAAAA4P////9/AIB/AAAAAAAAAAAAAAAAAAAAAPj///////////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P//////AQAAAAAAAAAAAAAAAAAA4P////8fAAA/AAAAAAAAAAAAAAAAAAAAAPj///////////8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P//////AAAAAAAAAAAAAAAAAAAA4P////8HAAAOAAAAAAAAAAAAAAAAAAAAAPD///////////8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+P////9/AAAAAAAAAAAAAAAAAAAAwP////8BAAAAAAAAAAAAAAAAAAAAAAAAAPD///////////8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/P////9/AAAAAAAAAAAAAAAAAAAAwP////8DAAAAAAAAAAAAAAAAAAAAAAAAAPj///////////8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/P////9/AAAAAAAAAAAAAAAAAAAAwP////8DAAAAAAAAAAAAAAAAAAAAAAAAAPj///////////8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/P////9/AAAAAAAAAAAAAAAAAAAAgP////8BAAAAAAAAAAAAAAAAAAAAAAAAAPD///////////8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/P////9/AAAAAAAAAAAAAAAAAAAAgP////8BAAAAAAAAAAAAAAAAAAAAAAAAAPD///////////8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/P////9/AAAAAAAAAAAAAAAAAAAAAP////8BAAAAAAAAAAAAAAAAAAAAAAAAAOD///////////8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v////8/AAAAAAAAAAAAAAAAAAAAAP7///8AAAAAAAAAAAAAAAAAAAAAAAAAAOD///////////8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v////8fAAAAAAAAAAAAAAAAAAAAAP7//38AAAAAAAAAAAAAAAAAAAAAAAAAAMD///////////8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v////8PAAAAAAAAAAAAAAAAAAAAAPz//z8AAAAAAAAAAAAAAAAAAAAAAAAAAMD///////////8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v////8PAAAAAAAAAAAAAAAAAAAAAPj//x8AAAAAAAAAAAAAAAAAAAAAAAAAAMD///////////8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v////8HAAAAAAAAAAAAAAAAAAAAAPj//x8AAAAAAAAAAAAAAAAAAAAAAAAAAMD///////////8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v////8DAAAAAAAAAAAAAAAAAAAAAPD//w8AAAAAAAAAAAAAAAAAAAAAAAAAAID///////////8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v////8BAAAAAAAAAAAAAAAAAAAAAPD//wcAAAAAAAAAAAAAAAAAAAAAAAAAAID///8D//////8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v///38AAAAAAAAAAAAAAAAAAAAAAPD//wMAAAAAAAAAAAAAAAAAAAAAAAAAAAD//y8A+P////8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v///38AAAAAAAAAAAAAAAAAAAAAAPD//wAAAAAAAAAAAAAAAAAAAAAAAAAAAID//wMA8P////8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v///z8AAAAAAAAAAAAAAAAAAAAAAPD/fwAAAAAAAAAAAAAAAAAAAAAAAAAAAID//wAA4Pf//38AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/////x8AAAAAAAAAAAAAAAAAAAAAAPD/DwAAAAAAAAAAAAAAAAAAAAAAAAAAAMD//wAAwPP//38AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////9x8AAAAAAAAAAAAAAAAAAAAAAOAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMB/AAAAwPn//z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA////jwcAAAAAAAAAAAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfAAAAgOj//z8AAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA////HwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOD//x8AAAAAABwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA////HwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMD//x8AAAAAABgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADA////PwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAID//w8AAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADA////PwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//w8AAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg////PwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD//w8AAAAAAOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg////HwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+/wcAAAAAAOARAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg////DwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4fQAAAAAAAOAfAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg////AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAOAPAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADA//8PAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg//8PAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADg//8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADw//8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAAAAMIBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADw/z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/AEAAAAAAOsAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADw/z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/AEAAAAAgA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADQ/38BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+AAAAAAAgA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADQ//8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+AAAAAAAwAcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADQ/z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAAAAAA8AMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADA/z8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+AMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADI/x8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAfwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4/x8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4/wMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4/wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADgHwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8/wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADADwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8/wMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4/x8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8/w8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+/w8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+/wMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+/wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAeAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+/wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD+fwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8PwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8PwAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8PwDADwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8fwBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwdwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADQ+wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABg+wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACA/wMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/j8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8AMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADgAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAOAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGAAAAAAAAAAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP8DAAAAAAAAAAAAAPgDgB8AAAAA4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwP8HAAAAAAAAgAEAAP4P8P8D8P/9/wEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA/v8fAAAAAAAg/v9//v////9/////////DwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADw////gw8AAAD8////////////////////HwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///////8DAID//////////////////////wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4APj///////8HAOD//////////////////////38wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAnv8DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD8B/////////8HAPD/////////////////////////AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAnv8HAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMD/3/////////8HgP//////////////////////////fwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAvv8HAAAAAAAAAAAAAAAAAAAAAMAPvv8HAPz///////////8A+P///////////////////////////wMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAf/8PAAAAAAAAAAAAAAAAAAAAAP6f//////////////////8D/P////////////////////////////8BAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADwf/4fAAAAAAAAAAAAAAAAAB54/P////////////////////8B////////////////////////////////BwAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAAD8f/wfAAAAAAAAAAAAAAAA/P////////////////////////+A////////////////////////////////PwAAAAAAAAAAAAAAAAAAAAAAAAAAAPB/AAAAAAA4H/w/AAAAAAAAAAAAAAAA///////////////////////////3////////////////////////////////PwAAAAAAAAAAAAAAAAAAAAAAAAAAAAIAACAAAAAAAP8/AAAAAAAAAAAAAADg////////////////////////////////////////////////////////////HwAAAAAAAAAAAAAAAAAAAAAAAAAAAP4P4PAfgAAA/v9/AAAAAAAAAAAAAAD+////////////////////////////////////////////////////////////DwAAAAAAAAAAAAAAAAAAAGD4AwAAAPz/////73/4//8/AAAAAAAAAAAAAID/////////////////////////////////////////////////////////////AQAAAAAAAAAAAAAAAAAAAAAA/D8AAMD///////////8fAAAAAAAAAAAAAAD+//////////////////////////////////////////////////////////8/AAAAAAAAAAAAAAAAAOD///////8PAID///////////8BAAAAAAAAAAAAAID///////////////////////////////////////////////////////////8HAAAAAAAAAAAAAAAA+P///////////7///////////38AAAAAAAAAAAAAAPD///////////////////////////////////////////////////////////8BAAAAAAAAAAAAAAD4/////////////////////////wMAAAAAAAAAAAAAgP////////////////////////////////////////////////////////////8AAAAAAAAAAAAAAADw////////////////////////DwAAAAAAAAAAAAAA/////////////////////////////////////////////////////////////38AAAAAAAAAAAAAAAD//////////////////////z8AAAAAAAAAAAAAAMD//////////////////////////////////////////////////////////////38AAAAAAAAAAAA4H/j///////////////////////8BAAAAAAAAAAAAAPj///////////////////////////////////////////////////////////////8AAAAAAAAAAADw//////////////////////////8PAAAAAAAAAAAAwP////////////////////////////////////////////////////////////////8AAAAAAAAAAADg/////////////////////////z8AAAAAAADAfwAA/v////////////////////////////////////////////////////////////////8HAAAAAAAAAP4A/////////////////////////w8AAAAAAADw/wEA//////////////////////////////////////////////////////////////////8/AAAAAAAAAPgBAP///////////////////////w8AAAAAAAD4/wEA/////////////////////////////////////////////////////////////////wcAAAAAAAAAAAAAAAD+/////////////////////38AAABAAAD+/wEAAOD//////////////////////////////////////////////////////////////wMAAAAAAAAAAAAAAAD4//////////////////////8BAADgAfD/fwAAAID//////////////////////////////////////////////////////////////wEAAAAAAAAAAAAAAAD+////////////////////////A8D/AOD/AAAAAP///////////////////////////////////////////////////////////////wAAAAAAAAAAAAAA//P/////////////////////////fwAAAAAAAADg/////////////////////////////////////////////////////////////////wMAAAAAAAAAAAAA+P////////////////////////////8DAADwB/j//////////////////////////////////////////////////////////////////w8AAAAAAAAAAAAAwP////////////////////////////9/AOD//////////////////////////////////////////////////////////////////////z8AAAAAAAAAAAAAwP//////////////////////////////g/////////////////////////////////////////////////////////////////////////8HAAAAAAAAAAAA4P//////////////////////////////////////////////////////////////////////////////////////////////////////////AQAAAAAAAAAAwP//////////////////////////////////////////////////////////////////////////////////////////////////////////BwAAhOF/AAAAAPD//////////////////////////////////////////////////////////////////////////////////////////////////////////8MB////PwAAAAAA/P/////////////////////////////////////////////////////////////////////////////////////////////////////////////////A/wDA////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////'), u = new Uint8Array(b.length); for (var i = 0; i < b.length; i++) u[i] = b.charCodeAt(i); return u; })();
+  function isLand(lat, lon) {
+    var x = Math.floor((((lon + 180) % 360 + 360) % 360) * 2), y = Math.min(359, Math.max(0, Math.floor((90 - lat) * 2))), i = y * 720 + x;
+    return (LAND[i >> 3] >> (i & 7)) & 1;
+  }
+  var G = { lon: 12, lat: 25, zoom: 1, anim: null, tLon: null, tLat: null };
+  function hexRgb(h) { h = (h || '#000').trim(); if (h[0] === '#' && h.length === 4) h = '#' + h[1] + h[1] + h[2] + h[2] + h[3] + h[3]; var n = parseInt(h.slice(1), 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+  function drawGlobe() {
+    var cv = $('globe'); if (!cv) return;
+    var g = cv.getContext('2d'), N = cv.width, img = g.createImageData(N, N), px = img.data;
+    var sea = hexRgb(T.t1 || '#0a246a'), land = hexRgb(T.t2 || '#a6caf0'), bg = hexRgb(T.field || '#fff'), grid = hexRgb(T.dk || '#404040');
+    var R = (N / 2 - 2) * G.zoom, p0 = G.lat * Math.PI / 180, l0 = G.lon * Math.PI / 180, sp0 = Math.sin(p0), cp0 = Math.cos(p0);
+    for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
+      var o = (y * N + x) * 4, nx = (x + 0.5 - N / 2) / R, ny = -(y + 0.5 - N / 2) / R, rho = Math.sqrt(nx * nx + ny * ny), col;
+      if (rho > 1) col = bg;
+      else {
+        var c = Math.asin(rho), sc = Math.sin(c), cc = Math.cos(c);
+        var lat = rho ? Math.asin(cc * sp0 + ny * sc * cp0 / rho) : p0;
+        var lon = l0 + Math.atan2(nx * sc, rho * cc * cp0 - ny * sc * sp0);
+        var la = lat * 180 / Math.PI, lo = lon * 180 / Math.PI;
+        var base = isLand(la, lo) ? land : sea;
+        // luce in alto a sinistra, a gradini (effetto low poly)
+        var shade = cc * 0.75 + (-nx * 0.2 + ny * 0.25);
+        var k = shade > 0.75 ? 1.12 : shade > 0.45 ? 1 : shade > 0.2 ? 0.8 : 0.62;
+        var gw = 90 / R;
+        var gl = Math.abs(la % 30) < gw || Math.abs(((lo % 30) + 30) % 30) < gw / Math.max(0.2, Math.cos(lat));
+        col = [base[0] * k, base[1] * k, base[2] * k];
+        if (gl) col = [col[0] * 0.8 + grid[0] * 0.2, col[1] * 0.8 + grid[1] * 0.2, col[2] * 0.8 + grid[2] * 0.2];
+      }
+      px[o] = Math.min(255, col[0]); px[o + 1] = Math.min(255, col[1]); px[o + 2] = Math.min(255, col[2]); px[o + 3] = 255;
+    }
+    g.putImageData(img, 0, 0);
+    // puntino rosso sul posto
+    if (G.tLat != null) {
+      var p = G.tLat * Math.PI / 180, dl = (G.tLon - G.lon) * Math.PI / 180, cosc = sp0 * Math.sin(p) + cp0 * Math.cos(p) * Math.cos(dl);
+      if (cosc > 0) {
+        var sx = N / 2 + R * Math.cos(p) * Math.sin(dl), sy = N / 2 - R * (cp0 * Math.sin(p) - sp0 * Math.cos(p) * Math.cos(dl));
+        g.fillStyle = '#ffffff'; g.fillRect(Math.round(sx) - 2, Math.round(sy) - 2, 4, 4);
+        g.fillStyle = '#e00000'; g.fillRect(Math.round(sx) - 1, Math.round(sy) - 1, 2, 2);
+      }
+    }
+  }
+  function globeTo(lat, lon) {
+    G.tLat = lat; G.tLon = lon;
+    var fromLon = G.lon, fromLat = G.lat, fromZ = G.zoom, dLon = ((lon - fromLon + 540) % 360) - 180, t0 = performance.now(), dur = 1400;
+    if (G.anim) cancelAnimationFrame(G.anim);
+    (function step(now) {
+      var k = Math.min(1, (now - t0) / dur), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      G.lon = fromLon + dLon * e; G.lat = fromLat + (lat - fromLat) * e;
+      // durante il viaggio si allontana un po', all'arrivo zooma
+      G.zoom = k < 0.6 ? fromZ + (1 - fromZ) * (k / 0.6) : 1 + 0.45 * ((k - 0.6) / 0.4);
+      drawGlobe();
+      if (k < 1) G.anim = requestAnimationFrame(step); else G.anim = null;
+    })(t0);
   }
 
   // ---------- calendario ----------
@@ -1203,8 +1596,8 @@ var PescaEngine = (function () {
       var cls = [];
       if (sl.getUTCFullYear() === calY && sl.getUTCMonth() === calM && sl.getUTCDate() === d) cls.push('sel');
       if (nl.getUTCFullYear() === calY && nl.getUTCMonth() === calM && nl.getUTCDate() === d) cls.push('today');
-      var p = dayScore(calY, calM, d);
-      cells.push('<td data-d="' + d + '" class="' + cls.join(' ') + '" title="Miglior momento: ' + p + '%"><span>' + d + '</span><i style="background:' + COLORS[E.verdict(p)] + '"></i></td>');
+      var p = dayScore(calY, calM, d), me = moonEvent(midnightOf(calY, calM, d));
+      cells.push('<td data-d="' + d + '" class="' + cls.join(' ') + '" title="Miglior momento: ' + p + '%' + (me ? ' · ' + me.name : '') + '"><span>' + d + '</span>' + (me ? moonSvg(me.p, 9, S.place.lat) : '') + '<i style="background:' + COLORS[E.verdict(p)] + '"></i></td>');
     }
     while (cells.length % 7) cells.push('<td></td>');
     for (var r = 0; r < cells.length; r += 7) h += '<tr>' + cells.slice(r, r + 7).join('') + '</tr>';
@@ -1305,7 +1698,8 @@ var PescaEngine = (function () {
   function renderPres() {
     var zn = E.zoneOf(S.place.lat, S.place.lon);
     $('presTitle').textContent = 'Presenza in zona \u2014 ' + zn.name;
-    var seaSp = E.SPECIES.filter(function (x) { return x.hab !== 'fresh'; });
+    var envNow = data ? E.envOf(data, S.env) : 'sea';
+    var seaSp = E.SPECIES.filter(function (x) { return x.hab === 'both' || x.hab === envNow; });
     $('presList').innerHTML = seaSp.map(function (x) {
       var pi = E.presenceInfo(S.place.lat, S.place.lon, x.id), best = 0, dist = 9;
       E.PRES_LEVELS.forEach(function (lv, i) { var dd = Math.abs(lv[0] - pi.v); if (dd < dist) { dist = dd; best = i; } });
@@ -1318,7 +1712,7 @@ var PescaEngine = (function () {
     var sl = e.target.closest('select[data-sp]'); if (!sl) return;
     var k = E.zoneOf(S.place.lat, S.place.lon).key;
     S.pres[k] = S.pres[k] || {}; S.pres[k][sl.dataset.sp] = parseFloat(sl.value);
-    E.setPresence(S.pres); save(); calCache = {}; renderPres(); render();
+    E.setPresence(S.pres); save(); calCache = {}; renderPres(); fillTargets(); render();
   };
   $('presReset').onclick = function () {
     delete S.pres[E.zoneOf(S.place.lat, S.place.lon).key];
@@ -1339,7 +1733,7 @@ var PescaEngine = (function () {
   $('spot').onchange = function () { S.spot = this.value; E.setSpot(S.spot); save(); render(); };
   $('spList').onclick = function (e) { var tr = e.target.closest('tr'); if (!tr) return; S.target = tr.dataset.id; $('target').value = S.target; save(); render(); };
 
-  var searchSeq = 0;
+  var searchSeq = 0, broadNote = '';
   async function search() {
     var q = $('place').value.trim(); if (q.length < 2) { $('results').hidden = true; return; }
     var my = ++searchSeq;
@@ -1353,7 +1747,7 @@ var PescaEngine = (function () {
       $('results').onclick = function (e) { var d = e.target.closest('[data-i]'); if (!d) return; choose(r[+d.dataset.i]); };
     } catch (e) { if (my === searchSeq) $('results').innerHTML = '<div class="hint err">Ricerca non riuscita. Controlla la connessione.</div>'; }
   }
-  function choose(p) { searchSeq++; S.place = { name: p.name, lat: p.lat, lon: p.lon }; $('place').value = p.name; $('results').hidden = true; save(); load(); if (!$('favEditor').hidden) renderFavEditor(); if (!$('presBox').hidden) renderPres(); }
+  function choose(p) { searchSeq++; S.place = { name: p.name, lat: p.lat, lon: p.lon }; broadNote = p.broad ? p.name + ' è un/una ' + p.broad + ': uso il suo punto centrale. Per una previsione vera scegli una località precisa.' : ''; if (!E.presenceInfo(p.lat, p.lon, S.target).v) S.needTarget = true; $('place').value = p.name; $('results').hidden = true; save(); load(); if (!$('favEditor').hidden) renderFavEditor(); if (!$('presBox').hidden) renderPres(); }
   $('searchBtn').onclick = search;
   var typeT;
   $('place').oninput = function () { clearTimeout(typeT); typeT = setTimeout(search, 300); };
@@ -1381,7 +1775,7 @@ var PescaEngine = (function () {
     save(); load();
     $('wMain').scrollIntoView({ behavior: 'smooth' });
   };
-  $('favEditBtn').onclick = function () { var ed = $('favEditor'); ed.hidden = !ed.hidden; this.classList.toggle('on', !ed.hidden); if (!ed.hidden) renderFavEditor(); };
+  $('favEditBtn').onclick = function () { var ed = $('favEditor'); ed.hidden = !ed.hidden; this.classList.toggle('on', !ed.hidden); if (!ed.hidden) renderFavEditor(); $('favFoot').hidden = false; renderFavs(); };
   // ricerca del posto dentro ogni riga dei preferiti
   var favSeq = 0, favT, favRes = {};
   function setFavPlace(k, p) {
@@ -1441,10 +1835,15 @@ var PescaEngine = (function () {
   };
 
   $('cal').onclick = function (e) { var td = e.target.closest('td[data-d]'); if (!td || !data) return; setSel(midnightOf(calY, calM, +td.dataset.d) + minutesOfDay() * 60e3); };
-  $('calMonth').onchange = function () { calM = +this.value; renderCal(); };
-  $('calYear').onchange = function () { var y = parseInt(this.value, 10); if (y > 1999 && y < 2200) calY = y; renderCal(); };
-  $('yUp').onclick = function () { calY++; renderCal(); };
-  $('yDn').onclick = function () { calY--; renderCal(); };
+  function goMonth(y, m) {
+    if (!data) { calY = y; calM = m; renderCal(); return; }
+    var last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate(), day = Math.min(L(sel).getUTCDate(), last);
+    setSel(midnightOf(y, m, day) + minutesOfDay() * 60e3);
+  }
+  $('calMonth').onchange = function () { goMonth(calY, +this.value); };
+  $('calYear').onchange = function () { var y = parseInt(this.value, 10); if (y > 1999 && y < 2200) goMonth(y, calM); else renderCal(); };
+  $('yUp').onclick = function () { goMonth(calY + 1, calM); };
+  $('yDn').onclick = function () { goMonth(calY - 1, calM); };
   $('hUp').onclick = function () { setSel(sel + H); };
   $('hDn').onclick = function () { setSel(sel - H); };
   $('slider').oninput = function () { var mid = E.localMidnight(data, sel); setSel(mid + this.value * 30 * 60e3); };
@@ -1560,7 +1959,75 @@ var PescaEngine = (function () {
     window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
   }
 
-  load();
+  // ---------- benvenuto (primo avvio) ----------
+  var THEMES = [['blu', 'Blu classico', '#0a246a', '#a6caf0'], ['rosso', 'Rosso scuro', '#6b0f1a', '#d99aa3'], ['viola', 'Viola', '#3d1a6e', '#b9a2dc'], ['verde', 'Verde bosco', '#0f4d2a', '#93c9a8'], ['grafite', 'Grafite', '#2b2f33', '#9aa3ab'],
+    ['x-notte', 'Notte'], ['x-bosco', 'Bosco'], ['x-bosco-grigio', 'Bosco grigio'], ['x-foglie', 'Foglie d\u2019autunno'], ['x-neve', 'Neve'], ['x-acqua', 'Acqua'], ['x-blu', 'Blu acquerello']];
+  function texOf(id) {
+    for (var i = 0; i < document.styleSheets.length; i++) {
+      var rules; try { rules = document.styleSheets[i].cssRules; } catch (e) { continue; }
+      for (var j = 0; j < rules.length; j++) if (rules[j].selectorText === ':root[data-skin="' + id + '"]') return rules[j].style.getPropertyValue('--tex').replace(/"/g, "'");
+    }
+    return '';
+  }
+  function renderWelThemes() {
+    $('welThemes').innerHTML = THEMES.map(function (t) {
+      var bg = t[2] ? 'background:linear-gradient(90deg,' + t[2] + ',' + t[3] + ')' : 'background-image:' + texOf(t[0]);
+      return '<button class="btn raised' + (S.skin === t[0] ? ' on' : '') + '" data-th="' + t[0] + '"><i style="' + bg + '"></i>' + t[1] + '</button>';
+    }).join('');
+    $('welLight').classList.toggle('on', S.mode !== 'dark'); $('welDark').classList.toggle('on', S.mode === 'dark');
+  }
+  $('welThemes').onclick = function (e) { var b = e.target.closest('[data-th]'); if (!b) return; S.skin = b.dataset.th; applyTheme(); renderWelThemes(); };
+  $('welLight').onclick = function () { S.mode = 'light'; if (/^x-/.test(S.skin)) S.skin = 'blu'; applyTheme(); renderWelThemes(); };
+  $('welDark').onclick = function () { S.mode = 'dark'; if (/^x-/.test(S.skin)) S.skin = 'blu'; applyTheme(); renderWelThemes(); };
+  $('welNext').onclick = function () { $('welStep1').hidden = true; $('welStep2').hidden = false; $('welPlace').focus(); };
+  $('welBack').onclick = function () { $('welStep2').hidden = true; $('welStep1').hidden = false; };
+  var welSeq = 0, welT, welList = [];
+  async function welSearch() {
+    var q = $('welPlace').value.trim(); if (q.length < 2) { $('welRes').hidden = true; return; }
+    var my = ++welSeq; $('welRes').hidden = false;
+    if (!$('welRes').children.length) $('welRes').innerHTML = '<div class="hint">Cerco\u2026</div>';
+    try {
+      var r = await E.geocode(getJSON, q); if (my !== welSeq) return; welList = r;
+      $('welRes').innerHTML = r.length ? r.map(function (p, i) { return '<div data-wi="' + i + '">' + esc(p.name) + ' <span class="muted">' + esc(p.detail) + '</span></div>'; }).join('') : '<div class="hint">Nessun risultato.</div>';
+    } catch (e) { if (my === welSeq) $('welRes').innerHTML = '<div class="hint err">Ricerca non riuscita. Controlla la connessione.</div>'; }
+  }
+  function welDone(p) {
+    welSeq++;
+    S.place = { name: p.name, lat: p.lat, lon: p.lon }; S.env = 'auto'; S.spot = 'shore'; S.needTarget = true; S.setup = true;
+    E.setSpot(S.spot); $('env').value = S.env; $('spot').value = S.spot; $('place').value = p.name;
+    save(); $('welcome').hidden = true; load();
+  }
+  $('welPlace').oninput = function () { clearTimeout(welT); welT = setTimeout(welSearch, 300); };
+  $('welPlace').onkeydown = function (e) { if (e.key === 'Enter') { e.preventDefault(); var f = $('welRes').querySelector('[data-wi]'); if (f) f.click(); else welSearch(); } };
+  $('welRes').onclick = function (e) { var d = e.target.closest('[data-wi]'); if (d) welDone(welList[+d.dataset.wi]); };
+  $('welGps').onclick = function () {
+    if (!navigator.geolocation) { $('welMsg').textContent = 'Posizione non disponibile: cerca il posto per nome.'; return; }
+    $('welMsg').textContent = 'Rilevo la posizione\u2026';
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var la = pos.coords.latitude, lo = pos.coords.longitude;
+      // provo a dare un nome al posto; se non ci riesco uso "La mia posizione"
+      fetch('https://nominatim.openstreetmap.org/reverse?format=json&zoom=10&accept-language=it&lat=' + la.toFixed(3) + '&lon=' + lo.toFixed(3))
+        .then(function (r) { return r.json(); })
+        .then(function (j) { var ad = (j && j.address) || {}; return ad.city || ad.town || ad.village || ad.municipality || ad.county || 'La mia posizione'; }, function () { return 'La mia posizione'; })
+        .then(function (name) { welDone({ name: name, lat: la, lon: lo }); });
+    }, function () { $('welMsg').textContent = 'Posizione non concessa: cerca il posto per nome.'; }, { timeout: 12000 });
+  };
+
+  $('favTabs').onclick = function (e) {
+    var b = e.target.closest('[data-fm]'); if (!b) return;
+    favMode = +b.dataset.fm;
+    this.querySelectorAll('[data-fm]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    renderFavs();
+  };
+  // la finestra dei preferiti vuota si apre toccando il titolo
+  $('wFav').querySelector('.title').addEventListener('click', function (e) {
+    if (e.target.closest('button')) return;
+    if ($('wFav').classList.contains('min')) { $('wFav').classList.remove('min'); favOpened = true; renderFavs(); }
+  });
+  $('wFav').querySelector('[data-min]').addEventListener('click', function () { favOpened = true; setTimeout(renderFavs, 0); });
+
+  if (S.setup) load();
+  else { renderWelThemes(); $('welcome').hidden = false; $('place').value = ''; $('stPlace').textContent = 'Scegli dove vai a pescare per iniziare.'; renderFavs(); }
 })();
 </script>
 </body>
