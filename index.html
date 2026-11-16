@@ -92,7 +92,7 @@ body {
 .grp > legend { font-weight: bold; padding: 0 4px; }
 @media (min-width: 980px) {
   .mgrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
-  .g-top, .g-sp { grid-column: 1 / -1; }
+  .g-top, .g-sp, .g-out { grid-column: 1 / -1; }
 }
 .sidebox { display: grid; gap: 6px; }
 .bathythumb { position: relative; padding: 3px; cursor: pointer; border: 0; overflow: hidden; }
@@ -110,6 +110,8 @@ body {
 .distlbl { background: #fff; color: #c00000; font: bold 10px/1.2 Tahoma, Verdana, sans-serif; padding: 1px 4px; border: 1px solid #c00000; white-space: nowrap; }
 .nmscale { background: rgba(255,255,255,.85); border: 1px solid #333; border-top: 0; padding: 0 4px 1px; font: 10px Tahoma, Verdana, sans-serif; color: #000; }
 .lv tr.ztog td { color: #555; font-style: italic; cursor: pointer; background: #eef3fa; }
+.outrow { gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 6px; }
+#startMenu li.pastehot { background: #c00000 !important; color: #fff !important; font-weight: bold; }
 .isolbl { background: rgba(255,255,255,.85); color: #0b2a5a; font: bold 10px/1 Tahoma, Verdana, sans-serif; padding: 1px 3px; border: 1px solid #0b2a5a; white-space: nowrap; }
 .binfo .btn { min-height: 24px; padding: 2px 10px; }
 .radarbtns .btn { min-height: 24px; padding: 2px 10px; font-size: 11px; }
@@ -351,6 +353,7 @@ canvas.chart { width: 100%; display: block; }
                 <label class="lbl"><span><u>A</u>mbiente</span><select class="field sunken" id="env"><option value="auto">Automatico</option><option value="sea">Mare / laguna</option><option value="fresh">Acqua dolce</option></select></label>
                 <label class="lbl"><span><u>P</u>ostazione</span><select class="field sunken" id="spot"><option value="shore">Da riva</option><option value="boat">In barca</option></select></label>
               </div>
+              <div class="row outrow"><button class="btn raised outSave"><b>Salva uscita</b></button><button class="btn raised outShare">Condividi uscita</button><span class="tag outEdit" hidden></span></div>
             </div>
             <div class="sidebox">
               <div class="globebox sunken" title="Il posto scelto sul mappamondo"><canvas id="globe" width="88" height="88" aria-label="Mappamondo con il posto scelto"></canvas></div>
@@ -418,6 +421,8 @@ canvas.chart { width: 100%; display: block; }
           <div class="row" style="justify-content:space-between;align-items:center"><span class="muted">Per i prossimi giorni usa la barra del tempo in basso nella mappa (fino a circa 10 giorni). Qui posto, data e ora non cambiano il resto dell&rsquo;app.</span><button class="btn raised" id="radarCenter">Centra sul posto</button></div>
           <div class="muted" style="font-size:11px">Mappa e previsioni: Windy.com</div>
         </fieldset>
+
+        <div class="row outrow g-out"><button class="btn raised outSave"><b>Salva uscita</b></button><button class="btn raised outShare">Condividi uscita</button><span class="tag outEdit" hidden></span></div>
 
         <fieldset class="grp g-sp"><legend>Tutte le specie qui</legend>
           <div class="lvwrap sunken"><table class="lv"><thead><tr><th>Specie</th><th>Probabilit&agrave;</th><th class="n">%</th></tr></thead><tbody id="spList"></tbody></table></div>
@@ -495,6 +500,7 @@ canvas.chart { width: 100%; display: block; }
     <li data-act="tomorrow">Domani all&rsquo;alba</li>
     <li data-act="best">Miglior momento di oggi</li>
     <li data-act="reload">Aggiorna dati</li>
+    <li data-act="paste" class="pastehot">INCOLLA QUI <small>(punto o uscita ricevuti)</small></li>
     <hr>
     <li class="hd">COLORI</li>
     <li data-act="skin" data-v="blu"><span class="sw" style="background:#0a246a"></span>Blu classico</li>
@@ -990,7 +996,7 @@ var PescaEngine = (function () {
     var n = t.length, t0 = t[0];
     function col(src, key) { return (src && src.hourly && src.hourly[key]) ? src.hourly[key] : null; }
     var d = {
-      lat: lat, lon: lon, off: (f.utc_offset_seconds || 0) * 1000, t0: t0, n: n, fetched: Date.now(),
+      lat: lat, lon: lon, tz: f.timezone || null, off: (f.utc_offset_seconds || 0) * 1000, t0: t0, n: n, fetched: Date.now(),
       temp: f.hourly.temperature_2m, rain: f.hourly.precipitation, cloud: f.hourly.cloud_cover,
       press: f.hourly.pressure_msl, wind: f.hourly.wind_speed_10m, wdir: f.hourly.wind_direction_10m,
       gust: f.hourly.wind_gusts_10m, code: f.hourly.weather_code,
@@ -1166,8 +1172,23 @@ var PescaEngine = (function () {
   }
 
   // ---------- Tempo locale della località ----------
-  function local(d, t) { return new Date(t + d.off); } // usare getUTC*
-  function localMidnight(d, t) { var l = local(d, t); return Date.UTC(l.getUTCFullYear(), l.getUTCMonth(), l.getUTCDate()) - d.off; }
+  // scarto orario del posto in quel momento (con l'ora legale), dal nome del fuso; se manca, quello del download
+  var TZF = {}, OFFC = {};
+  function offAt(d, t) {
+    if (!d || !d.tz || typeof Intl === 'undefined') return d ? d.off : 0;
+    var k = d.tz + '|' + Math.floor(t / 1800000); if (k in OFFC) return OFFC[k];
+    try {
+      var f = TZF[d.tz] || (TZF[d.tz] = new Intl.DateTimeFormat('en-US', { timeZone: d.tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' }));
+      var p = {}; f.formatToParts(new Date(t)).forEach(function (x) { p[x.type] = +x.value; });
+      var o = Date.UTC(p.year, p.month - 1, p.day, p.hour % 24, p.minute, p.second) - (t - (t % 1000));
+      return (OFFC[k] = o);
+    } catch (err) { return d.off; }
+  }
+  function local(d, t) { return new Date(t + offAt(d, t)); } // usare getUTC*
+  function localMidnight(d, t) {
+    var l = local(d, t), base = Date.UTC(l.getUTCFullYear(), l.getUTCMonth(), l.getUTCDate());
+    var m = base - offAt(d, base - d.off); return base - offAt(d, m);
+  }
 
   // ---------- Condizioni a un istante ----------
   function val(arr, d, t) {
@@ -1586,7 +1607,7 @@ var PescaEngine = (function () {
     dayCurve: dayCurve, bestWindow: bestWindow, tideExtremes: tideExtremes, seaLevel: seaLevel,
     local: local, localMidnight: localMidnight, moon: moon, envOf: envOf, windName: windName, windSide: windSide, skyName: skyName, verdict: verdict,
     byId: byId, PERIOD_NAMES: PERIOD_NAMES, setSpot: setSpot,
-    setPresence: setPresence, zoneOf: zoneOf, presenceInfo: presenceInfo, PRES_LEVELS: PRES_LEVELS, inRange: inRange, habOK: habOK, setDepth: setDepth, depthOf: depthOf, setElev: setElev, elevAt: elevAt, regionAt: regionAt, loadClimate: loadClimate, seasonAt: seasonAt, DEPTH: DEPTH, depthBand: depthBand, lakeAt: lakeAt, lakeDepth: lakeDepth
+    setPresence: setPresence, zoneOf: zoneOf, presenceInfo: presenceInfo, PRES_LEVELS: PRES_LEVELS, inRange: inRange, offAt: offAt, habOK: habOK, setDepth: setDepth, depthOf: depthOf, setElev: setElev, elevAt: elevAt, regionAt: regionAt, loadClimate: loadClimate, seasonAt: seasonAt, DEPTH: DEPTH, depthBand: depthBand, lakeAt: lakeAt, lakeDepth: lakeDepth
   };
 })();
 
@@ -1594,7 +1615,7 @@ var PescaEngine = (function () {
 <script>
 (function () {
   'use strict';
-  var APP_NAME = 'Pescomante', APP_VERSION = '41', APP_DATE = '2026-11-16';
+  var APP_NAME = 'Pescomante', APP_VERSION = '46', APP_DATE = '2026-11-16';
   var E = PescaEngine, H = E.H, D = E.D;
   var $ = function (id) { return document.getElementById(id); };
   var GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
@@ -1660,7 +1681,7 @@ var PescaEngine = (function () {
   }
   applyTheme();
 
-  var data = null, sel = Date.now(), live = true, calY, calM, calCache = {};
+  var data = null, sel = Date.now(), live = true, calY, calM, calCache = {}, newDay = null;
   function getJSON(u) { return fetch(u).then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); }); }
 
   // ---------- formati (ora locale della località) ----------
@@ -1669,7 +1690,7 @@ var PescaEngine = (function () {
   function hhmm(t) { var l = L(t); return pad(l.getUTCHours()) + ':' + pad(l.getUTCMinutes()); }
   function dayLong(t) { var l = L(t); return GIORNI_L[l.getUTCDay()] + ' ' + l.getUTCDate() + ' ' + MESI[l.getUTCMonth()] + ' ' + l.getUTCFullYear(); }
   function dayShort(t) { var l = L(t); return GIORNI[l.getUTCDay()] + ' ' + l.getUTCDate() + '/' + (l.getUTCMonth() + 1); }
-  function midnightOf(y, m, d) { return Date.UTC(y, m, d) - data.off; }
+  function midnightOf(y, m, d) { var b = Date.UTC(y, m, d), t = b - E.offAt(data, b - data.off); return b - E.offAt(data, t); }
   function sp(id) { return E.byId(E.SPECIES, id); }
   function fx(v, n) { return v == null ? '–' : v.toFixed(n); }
   function sgn(v) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2); }
@@ -1758,6 +1779,8 @@ var PescaEngine = (function () {
       if (G.tLat !== S.place.lat || G.tLon !== S.place.lon) globeTo(S.place.lat, S.place.lon);
       loadFavs();
       calCache = {};
+      // nuova uscita dal calendario: appena scelto il posto, le 7:00 di quel giorno nell'ora del posto
+      if (newDay) { sel = midnightOf(newDay[0], newDay[1], newDay[2]) + 7 * 3600e3; live = false; newDay = null; }
       var l = L(sel); calY = l.getUTCFullYear(); calM = l.getUTCMonth();
       render();
     } catch (e) {
@@ -2348,6 +2371,7 @@ var PescaEngine = (function () {
     if (a === 'export') { exportSettings(); return; }
     if (a === 'import') { $('importFile').click(); return; }
     if (a === 'install') { doInstall(); return; }
+    if (a === 'paste') { if (window.PescaPasteShare) window.PescaPasteShare(); return; }
     if (!data) return;
     var mid = E.localMidnight(data, Date.now());
     if (a === 'now') setSel(Date.now(), true);
@@ -2605,6 +2629,30 @@ var PescaEngine = (function () {
   window.PescaPlace = function () { return S.place; };
   window.PescaUsePlace = function (p) { choose(p); };
   window.PescaGeocode = function (q) { return E.geocode(getJSON, q); };
+  window.PescaSnap = function () {
+    if (!data) return null;
+    var c = E.conditions(data, sel); resolveAuto(sel);
+    var me = E.score(data, c, CT, CY, S.env), env = E.envOf(data, S.env);
+    return { place: { name: S.place.name, lat: S.place.lat, lon: S.place.lon }, t: sel, type: S.type, target: S.target, env: S.env, spot: S.spot,
+      effType: CY, effTarget: CT, typeName: E.byId(E.TYPES, CY).name, targetName: sp(CT).name, envName: env === 'sea' ? 'mare' : 'acqua dolce',
+      pct: me.pct, label: me.label, tz: data.tz || null, code: c.code, sky: c.forecast && c.code != null ? E.skyName(c.code) : null, temp: c.temp, wind: c.wind, wdir: c.wdir != null ? E.windName(c.wdir) : null,
+      wave: env === 'sea' ? c.wave : null, forecast: !!c.forecast, when: dayLong(sel) + ', ore ' + hhmm(sel) };
+  };
+  window.PescaOpen = function (o) {
+    S.place = { name: o.place.name, lat: o.place.lat, lon: o.place.lon };
+    ['type', 'target', 'env', 'spot'].forEach(function (k) { if (o[k]) { S[k] = o[k]; $(k).value = o[k]; } });
+    E.setSpot(S.spot); $('place').value = S.place.name; save();
+    sel = o.t; live = false; load().then(function () { sel = o.t; live = false; var l = L(sel); calY = l.getUTCFullYear(); calM = l.getUTCMonth(); render(); });
+  };
+  // nuova uscita dal calendario: quel giorno, tecnica e pesce da scegliere, campo del posto vuoto
+  window.PescaNewOuting = function (t) {
+    var dd = new Date(t); newDay = [dd.getFullYear(), dd.getMonth(), dd.getDate()];
+    S.type = 'auto'; S.target = 'auto'; $('type').value = 'auto'; $('target').value = 'auto'; save();
+    sel = t; live = false; if (data) { var l = L(sel); calY = l.getUTCFullYear(); calM = l.getUTCMonth(); render(); }
+    $('place').value = ''; $('place').placeholder = 'Scrivi il posto della nuova uscita (es. Lignano)';
+    $('stPlace').textContent = 'Nuova uscita: scegli il posto, poi tecnica e pesce.';
+    setTimeout(function () { window.scrollTo({ top: 0, behavior: 'smooth' }); $('place').focus(); }, 80);
+  };
   function loadLeaflet() {
     if (LF) return LF;
     LF = new Promise(function (res, rej) {
@@ -3256,6 +3304,7 @@ var PescaEngine = (function () {
     '<div class="listbox sunken" id="ptRes" hidden></div>' +
     '<div class="prow ptlay"><label><input type="checkbox" id="ptSea" checked> Segnali nautici</label><label><input type="checkbox" id="ptIso"> Batimetriche (solo Europa, approssimative)</label>' +
     '<button class="btn raised" id="ptGps">La mia posizione</button></div>' +
+    '<div class="prow"><button class="btn raised" id="ptTr">Traccia linea</button><button class="btn raised" id="ptTrEnd" hidden><b>Fine</b></button><button class="btn raised" id="ptTrClr" hidden>Cancella linea</button></div>' +
     '<div class="sunken"><div id="ptMap"></div></div>' +
     '<div class="sunken" id="ptBar"><span class="c muted">Tocca la mappa per scegliere un punto.</span></div>' +
     '<div class="sunken" style="padding:4px 6px"><div class="pthead" id="ptHead"><span id="ptArrow">&#9662;</span><span id="ptCount">Punti salvati</span></div><div id="ptList"></div></div>' +
@@ -3315,7 +3364,7 @@ var PescaEngine = (function () {
       layers.iso = L.tileLayer.wms('https://ows.emodnet-bathymetry.eu/wms', { layers: 'emodnet:contours', format: 'image/png', transparent: true, version: '1.1.1', attribution: 'Fondali &copy; EMODnet' });
       if ($('ptSea').checked) layers.sea.addTo(map);
       markers = L.layerGroup().addTo(map);
-      map.on('click', function (ev) { setPick(ev.latlng.lat, ev.latlng.lng); });
+      map.on('click', function (ev) { if (tr.on) { tr.pts.push(ev.latlng); var t = trDraw(false); bar('<span class="c">' + tr.pts.length + (tr.pts.length === 1 ? ' punto' : ' punti') + (t ? ' &middot; finora <b>' + fmtD(t) + '</b>' : '') + '. Tocca <b>Fine</b> quando hai finito.</span>'); return; } setPick(ev.latlng.lat, ev.latlng.lng); });
       map.on('locationfound', function (ev) { map.setView(ev.latlng, Math.max(map.getZoom(), 15)); setPick(ev.latlng.lat, ev.latlng.lng); $('ptGps').disabled = false; });
       map.on('locationerror', function () { $('ptGps').disabled = false; bar('<span class="c err">Posizione non disponibile: controlla il GPS e i permessi del browser.</span>'); });
       drawMarkers();
@@ -3354,6 +3403,37 @@ var PescaEngine = (function () {
     map.setView([p.lat, p.lon], 14); setPick(p.lat, p.lon);
   };
   function bar(h) { $('ptBar').innerHTML = h; }
+  // ---------- traccia linea: tocca i punti, poi Fine; con un punto solo misura dal posto scelto ----------
+  var tr = { on: false, pts: [], layer: null };
+  function fmtD(m) { return (m / 1852).toFixed(1).replace('.', ',') + ' mg &middot; ' + (m / 1000).toFixed(1).replace('.', ',') + ' km'; }
+  function trDraw(final) {
+    if (tr.layer) map.removeLayer(tr.layer);
+    tr.layer = Lf.layerGroup().addTo(map);
+    var p = tr.pts.slice();
+    if (final && p.length === 1 && window.PescaPlace) { var c = window.PescaPlace(); p.unshift(Lf.latLng(c.lat, c.lon)); }
+    p.forEach(function (q) { Lf.circleMarker(q, { radius: 4, color: '#e00000', weight: 2, fillColor: '#fff', fillOpacity: 1, interactive: false }).addTo(tr.layer); });
+    if (p.length < 2) return 0;
+    Lf.polyline(p, { color: '#ff2020', weight: 3, interactive: false }).addTo(tr.layer);
+    var tot = 0;
+    for (var i = 1; i < p.length; i++) {
+      var d = map.distance(p[i - 1], p[i]); tot += d;
+      if (final) Lf.marker([(p[i - 1].lat + p[i].lat) / 2, (p[i - 1].lng + p[i].lng) / 2], { interactive: false, icon: Lf.divIcon({ className: '', html: '<span class="distlbl">' + fmtD(d) + '</span>', iconSize: null }) }).addTo(tr.layer);
+    }
+    return tot;
+  }
+  function trMode(on) { tr.on = on; $('ptTr').hidden = on; $('ptTrEnd').hidden = !on; $('ptTrClr').hidden = !on && !tr.layer; map.getContainer().style.cursor = on ? 'crosshair' : ''; }
+  $('ptTr').onclick = function () {
+    if (!map) return;
+    tr.pts = []; if (tr.layer) { map.removeLayer(tr.layer); tr.layer = null; }
+    if (pick) { map.removeLayer(pick); pick = null; }
+    trMode(true); bar('<span class="c">Tocca i punti del percorso, poi <b>Fine</b>. Con un punto solo misuro dal posto scelto (pallino blu).</span>');
+  };
+  $('ptTrEnd').onclick = function () {
+    if (!tr.pts.length) { trMode(false); bar('<span class="c muted">Nessun punto toccato.</span>'); return; }
+    var tot = trDraw(true); trMode(false); $('ptTrClr').hidden = false;
+    bar('<span class="c">Totale: <b>' + fmtD(tot) + '</b>' + (tr.pts.length === 1 ? ' (dal posto scelto)' : ' in ' + (tr.pts.length - 1) + (tr.pts.length === 2 ? ' tratto' : ' tratti')) + '</span>');
+  };
+  $('ptTrClr').onclick = function () { if (tr.layer) { map.removeLayer(tr.layer); tr.layer = null; } tr.pts = []; trMode(false); $('ptTrClr').hidden = true; bar('<span class="c muted">Linea cancellata.</span>'); };
   function setPick(la, lo) {
     if (pick) map.removeLayer(pick);
     pick = Lf.circleMarker([la, lo], { radius: 7, color: '#fff', weight: 3, fillColor: '#e00000', fillOpacity: 1 }).addTo(map);
@@ -3381,8 +3461,9 @@ var PescaEngine = (function () {
     selId = p.id;
     if (pick) { map.removeLayer(pick); pick = null; }
     map.setView([p.lat, p.lon], Math.max(map.getZoom(), 15));
-    bar('<span class="c"><span class="ptdot" style="background:' + (p.color || COLORS[0][0]) + '"></span> <b>' + esc(p.name) + '</b><br><small>' + fmt(p) + '</small></span><button class="btn raised" id="ptUseS"><b>Usa questo punto</b></button><button class="btn raised ptdel" id="ptDelS" aria-label="Elimina">' + TRASH + '</button>');
+    bar('<span class="c"><span class="ptdot" style="background:' + (p.color || COLORS[0][0]) + '"></span> <b>' + esc(p.name) + '</b><br><small>' + fmt(p) + '</small></span><button class="btn raised" id="ptUseS"><b>Usa questo punto</b></button><button class="btn raised" id="ptShS">Condividi</button><button class="btn raised ptdel" id="ptDelS" aria-label="Elimina">' + TRASH + '</button>');
     $('ptUseS').onclick = function () { use(p); };
+    $('ptShS').onclick = function () { if (window.PescaShare) window.PescaShare('p', p); };
     $('ptDelS').onclick = function () { askDelete(p); };
     listOpen = true; renderList();
   }
@@ -3402,12 +3483,14 @@ var PescaEngine = (function () {
     $('ptList').innerHTML = pts.length ? pts.map(function (p, i) {
       return '<div class="ptrow' + (p.id === selId ? ' sel' : '') + '"><span class="ptdot" style="background:' + (p.color || COLORS[0][0]) + '"></span><div class="nm" data-go="' + i + '"><b>' + esc(p.name) + '</b><small>' + fmt(p) + '</small></div>' +
         '<button class="btn raised" data-use="' + i + '"><b>Usa questo punto</b></button>' +
+        '<button class="btn raised" data-sh="' + i + '" aria-label="Condividi ' + esc(p.name) + '" title="Condividi">&#8599;&#xFE0E;</button>' +
         '<button class="btn raised ptdel" data-del="' + i + '" aria-label="Elimina ' + esc(p.name) + '">' + TRASH + '</button></div>';
     }).join('') : '<div class="muted" style="padding:6px 2px">Nessun punto salvato. Tocca la mappa e poi &laquo;Salva punto&raquo;.</div>';
   }
   $('ptHead').onclick = function () { listOpen = !listOpen; try { localStorage.setItem(KEY + '.open', listOpen ? '1' : '0'); } catch (e) {} renderList(); };
   $('ptList').onclick = function (e) {
-    var u = e.target.closest('[data-use]'), d = e.target.closest('[data-del]'), g = e.target.closest('[data-go]');
+    var u = e.target.closest('[data-use]'), d = e.target.closest('[data-del]'), g = e.target.closest('[data-go]'), sh = e.target.closest('[data-sh]');
+    if (sh) { var q0 = pts[+sh.dataset.sh]; if (q0 && window.PescaShare) window.PescaShare('p', q0); return; }
     if (u) { var p = pts[+u.dataset.use]; if (p) use(p); return; }
     if (d) { var q = pts[+d.dataset.del]; if (q) askDelete(q); return; }
     if (g && map) { selectSaved(+g.dataset.go); window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -3461,8 +3544,9 @@ var PescaEngine = (function () {
   function show(on) {
     desk.hidden = !on; btn.classList.toggle('on', on);
     if (on) {
-      main.hidden = true; if (deskP) deskP.hidden = true;
-      taskBtn.classList.remove('on'); if (permBtn) permBtn.classList.remove('on');
+      // nasconde tutte le altre finestre (Pescomante, Permessi, Uscite, Calendario)
+      document.querySelectorAll('.desk').forEach(function (x) { if (x !== desk) x.hidden = true; });
+      document.querySelectorAll('.taskbar .task').forEach(function (x) { if (x !== btn) x.classList.remove('on'); });
       var ib = $('installBar'); if (ib) ib.hidden = true;
       window.scrollTo(0, 0);
       renderList();
@@ -3470,8 +3554,455 @@ var PescaEngine = (function () {
     }
   }
   btn.onclick = function (e) { e.stopPropagation(); show(true); };
+  // punto ricevuto da un amico: si apre qui; "Salva" lo aggiunge anche alla lista
+  window.PuntiReceive = function (p, save) {
+    show(true);
+    initMap().then(function () {
+      if (save) {
+        var i = -1; pts.forEach(function (x, k) { if (Math.abs(x.lat - p.lat) < 1e-6 && Math.abs(x.lon - p.lon) < 1e-6) i = k; });
+        if (i < 0) { pts.push({ id: 'pt' + Date.now().toString(36), name: p.name, color: p.color || COLORS[0][0], lat: +p.lat, lon: +p.lon, created: Date.now() }); saveAll(pts); i = pts.length - 1; }
+        drawMarkers(); listOpen = true; renderList(); selectSaved(i);
+      } else {
+        map.setView([p.lat, p.lon], 15); setPick(p.lat, p.lon);
+        $('ptBar').insertAdjacentHTML('afterbegin', '<span class="c">Punto ricevuto: <b>' + esc(p.name) + '</b></span>');
+      }
+    });
+  };
   // Pescomante e Permessi chiudono questa finestra (i loro tasti restano gestiti da permessi.js)
   [taskBtn, permBtn].forEach(function (b) { if (b) b.addEventListener('click', function () { if (!desk.hidden) { desk.hidden = true; btn.classList.remove('on'); if (b === taskBtn) { main.hidden = false; taskBtn.classList.add('on'); window.scrollTo(0, 0); } } }, true); });
+})();
+
+// ===== Pescomante: uscite salvate, calendario, promemoria (.ics) e condivisione di punti e uscite =====
+// Tutto resta sul telefono (localStorage). La condivisione mette i dati dentro il link (#pm=...): nessun server.
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+  var KEY = 'pesca.uscite', OKEY = 'pesca.uscite.open';
+  var GIORNI = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+  var MESI = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  // data e ora nel fuso del posto dell'uscita (con l'ora legale); senza fuso, quella del telefono
+  var TZF = {};
+  function tparts(t, tz) {
+    if (tz && typeof Intl !== 'undefined') {
+      try {
+        var f = TZF[tz] || (TZF[tz] = new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', weekday: 'short' }));
+        var p = {}; f.formatToParts(new Date(t)).forEach(function (x) { p[x.type] = x.value; });
+        return { y: +p.year, mo: +p.month - 1, d: +p.day, h: +p.hour % 24, mi: +p.minute, wd: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday) };
+      } catch (e) {}
+    }
+    var x = new Date(t); return { y: x.getFullYear(), mo: x.getMonth(), d: x.getDate(), h: x.getHours(), mi: x.getMinutes(), wd: x.getDay() };
+  }
+  function tzOf(u) { return u && u.snap && u.snap.tz || null; }
+  function whenTxt(t, tz) { var p = tparts(t, tz); return GIORNI[p.wd] + ' ' + p.d + ' ' + MESI[p.mo] + ' ' + p.y + ', ore ' + pad(p.h) + ':' + pad(p.mi); }
+  function dayKey(t, tz) { var p = tparts(t, tz); return p.y + '-' + pad(p.mo + 1) + '-' + pad(p.d); }
+  function isStandalone() { try { return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true; } catch (e) { return false; } }
+  function skyIcon(code) {
+    if (code == null) return '\uD83C\uDFA3';
+    if (code <= 1) return '\u2600\uFE0F'; if (code === 2) return '\u26C5'; if (code === 3) return '\u2601\uFE0F';
+    if (code === 45 || code === 48) return '\uD83C\uDF2B\uFE0F'; if (code >= 95) return '\u26C8\uFE0F';
+    if (code >= 71 && code <= 77) return '\u2744\uFE0F'; if (code >= 80) return '\uD83C\uDF26\uFE0F'; return '\uD83C\uDF27\uFE0F';
+  }
+  function pctColor(p) { return p >= 70 ? '#0a7a2a' : p >= 45 ? '#3a7d00' : p >= 25 ? '#b07800' : '#c00000'; }
+
+  // ---------- archivio ----------
+  function loadU() { try { var a = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+  function saveU() { try { localStorage.setItem(KEY, JSON.stringify(list)); return true; } catch (e) { return false; } }
+  var list = loadU(), openMap = {};
+  try { openMap = JSON.parse(localStorage.getItem(OKEY) || '{}') || {}; } catch (e) {}
+  function saveOpen() { try { localStorage.setItem(OKEY, JSON.stringify(openMap)); } catch (e) {} }
+  function byT() { return list.slice().sort(function (a, b) { return b.t - a.t; }); }
+  function find(id) { for (var i = 0; i < list.length; i++) if (list[i].id === id) return list[i]; return null; }
+  var editId = null;   // uscita aperta in Pescomante: "Salva uscita" la sovrascrive
+
+  // ---------- stile ----------
+  var css = document.createElement('style');
+  css.textContent = [
+    '.uwin .title .usub { font-weight: normal; opacity: .85; font-size: 11px; margin-left: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+    '.uwin .title > span:first-of-type { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }',
+    '.ualarm { min-height: 20px !important; padding: 0 5px !important; color: #fff !important; background: #c00000 !important; font-size: 12px; line-height: 18px; }',
+    '.ualarm.on { box-shadow: 0 0 0 2px #ffd200 inset; }',
+    '.ugrid { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0; }',
+    '.ugrid dt { color: var(--muted); } .ugrid dd { margin: 0; font-weight: bold; }',
+    '.ubtns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }',
+    '.upct { font-size: 20px; font-weight: bold; }',
+    '.ucal { width: 100%; border-collapse: separate; border-spacing: 3px; table-layout: fixed; }',
+    '.ucal th { font-size: 11px; color: var(--muted); font-weight: normal; }',
+    '.ucal td { height: 54px; vertical-align: top; padding: 2px 3px; font-size: 11px; cursor: pointer; background: var(--field); box-shadow: inset 1px 1px var(--sh), inset -1px -1px var(--hi); position: relative; overflow: hidden; }',
+    '.ucal td.out { opacity: .35; }',
+    '.ucal td.today { outline: 2px solid var(--acc); outline-offset: -2px; }',
+    '.ucal td.has { background: var(--acc); color: var(--acc-ink); box-shadow: inset 1px 1px rgba(255,255,255,.5), inset -1px -1px rgba(0,0,0,.4); }',
+    '.ucal td.sel { outline: 3px solid var(--ink); outline-offset: -3px; }',
+    '.ucal td .dn { font-weight: bold; }',
+    '.ucal td .ci { display: block; text-align: center; font-size: 15px; line-height: 1.1; margin-top: 1px; }',
+    '.ucal td .cp { display: block; text-align: center; font-weight: bold; font-size: 11px; }',
+    '.ucal td .unew { display: block; width: 26px; height: 26px; min-height: 0 !important; padding: 0 !important; margin: 2px auto 0; font-size: 18px; font-weight: bold; line-height: 22px; }',
+    '.ucal td .unewt { display: block; text-align: center; font-size: 9px; line-height: 1.1; }',
+    '.ucal td .cn { position: absolute; top: 2px; right: 3px; background: var(--acc-ink); color: var(--acc); border-radius: 8px; padding: 0 4px; font-weight: bold; font-size: 10px; }',
+    '.ucalhead { display: flex; align-items: center; gap: 6px; } .ucalhead b { flex: 1; text-align: center; font-size: 15px; text-transform: capitalize; }',
+    '.ucard { padding: 6px 8px; margin-top: 6px; }',
+    '.ucard h4 { margin: 0 0 4px; font-size: 13px; }',
+    '#uDlg .win, #uShare .win, #uRecv .win, #uPaste .win, #uAsk .win, #uRem .win { max-width: 400px; }',
+    '#uDlg .body, #uRem .body { max-height: 82vh; overflow-y: auto; }',
+    '.urem label { display: flex; gap: 6px; align-items: center; padding: 2px 0; }',
+    '.urem input[type=number] { width: 60px; }',
+    '#uPasteTxt { width: 100%; min-height: 90px; box-sizing: border-box; font: inherit; }',
+    '.uempty { padding: 10px 4px; }',
+    '@media (max-width: 600px) { .taskbar .task:not(.on) > span { display: none; } .taskbar .task { flex: 0 0 auto; } .taskbar .task.on { flex: 1 1 auto; } }'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  var IC_U = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 9h12l-2 4H4z" fill="#c8a24a" stroke="#000"/><path d="M8 2v7M8 2l4 5H8" fill="#fff" stroke="#000"/></svg>';
+  var IC_C = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="12" fill="#fff" stroke="#000"/><rect x="1.5" y="2.5" width="13" height="3" fill="#c00000" stroke="#000"/><rect x="4" y="8" width="2" height="2" fill="#c00000"/><rect x="7" y="8" width="2" height="2" fill="#000"/><rect x="10" y="8" width="2" height="2" fill="#000"/><rect x="4" y="11" width="2" height="2" fill="#000"/></svg>';
+  var BELL = '\u23F0';
+
+  // ---------- finestre (schede) ----------
+  var main = document.querySelector('.desk');
+  function mkDesk(id, inner) { var d = document.createElement('div'); d.className = 'desk'; d.id = id; d.hidden = true; d.innerHTML = inner; var all = document.querySelectorAll('.desk'); var last = all[all.length - 1]; last.parentNode.insertBefore(d, last.nextSibling); return d; }
+  var deskU = mkDesk('usciteDesk', '<section class="win raised"><div class="title">' + IC_U + '<span>Uscite salvate</span></div><div class="body"><div id="uList"></div><p class="muted" style="margin:0">Le uscite restano solo su questo telefono. Per salvarne una: imposta la pescata in Pescomante e tocca &laquo;Salva uscita&raquo;.</p></div></section>');
+  var deskC = mkDesk('calDesk', '<section class="win raised"><div class="title">' + IC_C + '<span>Calendario delle uscite</span></div><div class="body"><div class="ucalhead"><button class="btn raised" id="cPrev" aria-label="Mese prima">&#9664;</button><b id="cTitle"></b><button class="btn raised" id="cNext" aria-label="Mese dopo">&#9654;</button><button class="btn raised" id="cToday">Oggi</button></div><table class="ucal" id="cGrid"></table><div id="cDay"></div></div></section>');
+
+  var taskBtn = $('taskBtn'), permBtn = $('permBtn'), puntiBtn = $('puntiBtn');
+  function mkBtn(id, icon, label, after) { var b = document.createElement('button'); b.className = 'btn raised task'; b.id = id; b.innerHTML = icon + '<span>' + label + '</span>'; after.parentNode.insertBefore(b, after.nextSibling); return b; }
+  var uBtn = mkBtn('usciteBtn', IC_U, 'Uscite', permBtn || taskBtn);
+  var cBtn = mkBtn('calBtn', IC_C, 'Calendario', uBtn);
+  function showDesk(d, btn) {
+    document.querySelectorAll('.desk').forEach(function (x) { x.hidden = x !== d; });
+    document.querySelectorAll('.taskbar .task').forEach(function (x) { x.classList.toggle('on', x === btn); });
+    var ib = $('installBar'); if (ib) ib.hidden = true;
+    window.scrollTo(0, 0);
+  }
+  uBtn.onclick = function (e) { e.stopPropagation(); renderList(); showDesk(deskU, uBtn); };
+  cBtn.onclick = function (e) { e.stopPropagation(); renderCal(); showDesk(deskC, cBtn); };
+  // gli altri tasti della barra chiudono le nostre finestre
+  [taskBtn, permBtn, puntiBtn].forEach(function (b) {
+    if (b) b.addEventListener('click', function () {
+      var wasOurs = !deskU.hidden || !deskC.hidden;
+      deskU.hidden = true; deskC.hidden = true; uBtn.classList.remove('on'); cBtn.classList.remove('on');
+      if (wasOurs && b === taskBtn) { main.hidden = false; document.querySelectorAll('.desk').forEach(function (x) { if (x !== main) x.hidden = true; }); taskBtn.classList.add('on'); }
+    }, true);
+  });
+  function goMain() { deskU.hidden = true; deskC.hidden = true; taskBtn.click(); if (main.hidden) { main.hidden = false; taskBtn.classList.add('on'); } }
+
+  // ---------- finestre di dialogo ----------
+  function modal(id, html) { var m = document.createElement('div'); m.className = 'modal'; m.id = id; m.hidden = true; m.innerHTML = '<section class="win raised" role="dialog" aria-modal="true">' + html + '</section>'; document.body.appendChild(m); m.addEventListener('click', function (e) { if (e.target === m) m.hidden = true; }); return m; }
+  var REMHTML = '<fieldset class="grp urem"><legend>' + BELL + ' Vuoi un promemoria?</legend>' +
+    '<label><input type="radio" name="RNAME" value="0" checked> No, niente promemoria</label>' +
+    '<label><input type="radio" name="RNAME" value="24"> 24 ore prima</label>' +
+    '<label><input type="radio" name="RNAME" value="12"> 12 ore prima</label>' +
+    '<label><input type="radio" name="RNAME" value="x"> <input type="number" class="field sunken" min="1" max="240" value="3" id="RNAMEh"> ore prima</label>' +
+    '<label><input type="checkbox" id="RNAME15"> Anche 15 minuti prima</label>' +
+    '<div class="muted" style="font-size:11px">Il promemoria va nel calendario del telefono, così l&rsquo;avviso arriva anche con Pescomante chiusa.</div></fieldset>';
+  var dlg = modal('uDlg', '<div class="title">' + IC_U + '<span id="udTitle">Salva uscita</span></div><div class="body">' +
+    '<div class="muted" id="udWhen"></div>' +
+    '<label class="lbl"><span>Nome dell&rsquo;uscita</span><input class="field sunken" id="udName" maxlength="50" placeholder="Es. Tonni a Rimini, Spigole al Tagliamento"></label>' +
+    '<label id="udOverRow" hidden style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="udOver" checked> <span id="udOverTxt"></span></label>' +
+    REMHTML.replace(/RNAME/g, 'udR') +
+    '<div class="err" id="udHint"></div>' +
+    '<div class="row" style="justify-content:flex-end;gap:6px"><button class="btn raised" id="udNo">Annulla</button><button class="btn raised" id="udYes"><b>Salva</b></button></div></div>');
+  var remDlg = modal('uRem', '<div class="title"><span>' + BELL + ' Promemoria</span></div><div class="body"><div class="muted" id="urWhat"></div>' + REMHTML.replace(/RNAME/g, 'urR') +
+    '<div class="row" style="justify-content:flex-end;gap:6px"><button class="btn raised" id="urNo">Annulla</button><button class="btn raised" id="urYes"><b>Crea promemoria</b></button></div></div>');
+  var ask = modal('uAsk', '<div class="title"><span id="uaTitle">Conferma</span></div><div class="body"><p style="margin:0" id="uaText"></p><div class="row" style="justify-content:flex-end;gap:6px;margin-top:8px"><button class="btn raised" id="uaNo">Annulla</button><button class="btn raised danger" id="uaYes">Elimina</button></div></div>');
+  var shareDlg = modal('uShare', '<div class="title"><span id="usTitle">Condividi</span></div><div class="body"><p style="margin:0" id="usText"></p>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px"><a class="btn raised" id="usWa" target="_blank" rel="noopener"><b>WhatsApp</b></a><a class="btn raised" id="usMail">Email</a><button class="btn raised" id="usCopy">Copia link</button></div>' +
+    '<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn raised" id="usClose">Chiudi</button></div></div>');
+  var recv = modal('uRecv', '<div class="title"><span id="uvTitle">Ti hanno condiviso</span></div><div class="body"><div id="uvText"></div>' +
+    '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px;justify-content:flex-end"><button class="btn raised" id="uvView"><b>Visualizza</b></button><button class="btn raised" id="uvSave"><b>Salva</b></button></div>' +
+    '<div id="uvHelp" hidden style="margin-top:8px"></div></div>');
+  var pasteDlg = modal('uPaste', '<div class="title"><span>INCOLLA QUI</span></div><div class="body"><div class="muted">Incolla il messaggio o il link che ti hanno mandato (punto o uscita di Pescomante).</div>' +
+    '<textarea class="field sunken" id="uPasteTxt"></textarea><div class="err" id="upHint"></div>' +
+    '<div class="row" style="justify-content:flex-end;gap:6px"><button class="btn raised" id="upNo">Annulla</button><button class="btn raised" id="upYes"><b>Apri</b></button></div></div>');
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') [dlg, remDlg, ask, shareDlg, recv, pasteDlg].forEach(function (m) { m.hidden = true; }); });
+
+  var askCb = null;
+  function confirmDel(text, cb) { $('uaTitle').textContent = 'Elimina uscita'; $('uaText').innerHTML = text; askCb = cb; ask.hidden = false; }
+  $('uaNo').onclick = function () { ask.hidden = true; askCb = null; };
+  $('uaYes').onclick = function () { ask.hidden = true; if (askCb) askCb(); askCb = null; };
+
+  // ---------- promemoria: file .ics per il calendario del telefono ----------
+  function readRem(pfx) {
+    var v = (document.querySelector('input[name=' + pfx + ']:checked') || {}).value || '0';
+    var h = v === 'x' ? Math.max(1, Math.min(240, parseInt($(pfx + 'h').value, 10) || 0)) : +v;
+    return { h: h, m15: $(pfx + '15').checked };
+  }
+  function setRem(pfx, r) {
+    r = r || { h: 0, m15: false };
+    var v = !r.h ? '0' : (r.h === 24 || r.h === 12) ? String(r.h) : 'x';
+    var el = document.querySelector('input[name=' + pfx + '][value="' + v + '"]'); if (el) el.checked = true;
+    if (v === 'x') $(pfx + 'h').value = r.h;
+    $(pfx + '15').checked = !!r.m15;
+  }
+  function icsEsc(s) { return String(s).replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;'); }
+  function icsT(t) { return new Date(t).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+  function makeIcs(u) {
+    var r = u.rem || {}, L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Pescomante//IT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'BEGIN:VEVENT',
+      'UID:' + u.id + '@pescomante', 'DTSTAMP:' + icsT(Date.now()), 'DTSTART:' + icsT(u.t), 'DTEND:' + icsT(u.t + 3 * 3600e3),
+      'SUMMARY:' + icsEsc('\uD83C\uDFA3 ' + u.name), 'LOCATION:' + icsEsc(u.place.name + ' (' + u.place.lat.toFixed(5) + ', ' + u.place.lon.toFixed(5) + ')'),
+      'DESCRIPTION:' + icsEsc((u.snap.targetName || '') + ' · ' + (u.snap.typeName || '') + ' · ' + (u.spot === 'boat' ? 'in barca' : 'da riva') + ' · probabilità ' + u.snap.pct + '% (stima di Pescomante)')];
+    if (r.h) L.push('BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:-PT' + r.h + 'H', 'DESCRIPTION:' + icsEsc('\u00AB' + u.name + '\u00BB fra ' + r.h + (r.h === 1 ? ' ora' : ' ore')), 'END:VALARM');
+    if (r.m15) L.push('BEGIN:VALARM', 'ACTION:DISPLAY', 'TRIGGER:-PT15M', 'DESCRIPTION:' + icsEsc('-15 minuti a \u00AB' + u.name + '\u00BB'), 'END:VALARM');
+    L.push('END:VEVENT', 'END:VCALENDAR');
+    return L.join('\r\n');
+  }
+  function sendIcs(u) {
+    var txt = makeIcs(u), fname = (u.name.replace(/[^A-Za-z0-9À-ÿ _-]+/g, '').trim() || 'uscita') + '.ics';
+    var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    if (ios) { window.open('data:text/calendar;charset=utf-8,' + encodeURIComponent(txt), '_blank'); return; }
+    var url = URL.createObjectURL(new Blob([txt], { type: 'text/calendar' })), a = document.createElement('a');
+    a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+  var remFor = null;
+  function openRem(u) { remFor = u; $('urWhat').innerHTML = '<b>' + esc(u.name) + '</b><br>' + esc(whenTxt(u.t, tzOf(u))); setRem('urR', u.rem); remDlg.hidden = false; }
+  $('urNo').onclick = function () { remDlg.hidden = true; remFor = null; };
+  $('urYes').onclick = function () {
+    if (!remFor) return; var r = readRem('urR'); remFor.rem = r; saveU(); remDlg.hidden = true;
+    if (r.h || r.m15) sendIcs(remFor);
+    var u = remFor; remFor = null; refreshAll();
+  };
+
+  // ---------- Salva uscita ----------
+  var pending = null, afterSave = null;
+  // normalmente "Salva uscita"; se stai modificando un'uscita: "Salva \u00ABnome\u00BB" e "Salva nuova uscita"
+  function showEdit() {
+    var u = editId && find(editId);
+    document.querySelectorAll('.outEdit').forEach(function (s) { s.hidden = true; });
+    document.querySelectorAll('.outSave').forEach(function (b) { b.innerHTML = u ? '<b>Salva \u00AB' + esc(u.name) + '\u00BB</b>' : '<b>Salva uscita</b>'; });
+    document.querySelectorAll('.outNew').forEach(function (b) { b.hidden = !u; });
+  }
+  document.querySelectorAll('.outSave').forEach(function (b) {
+    var n = document.createElement('button'); n.className = 'btn raised outNew'; n.hidden = true; n.textContent = 'Salva nuova uscita';
+    b.parentNode.insertBefore(n, b.nextSibling);
+  });
+  var saveMode = 'new';
+  function openSave(then, mode) {
+    var snap = window.PescaSnap && window.PescaSnap();
+    if (!snap) { alert('Aspetta che Pescomante finisca di caricare meteo e mare, poi riprova.'); return; }
+    pending = snap; afterSave = then || null;
+    var u = mode === 'new' ? null : (editId && find(editId));
+    saveMode = u ? 'over' : 'new';
+    $('udTitle').textContent = (then ? 'Salva e condividi' : 'Salva') + (u ? ' \u00AB' + u.name + '\u00BB' : ' nuova uscita');
+    $('udWhen').innerHTML = esc(snap.when) + '<br>' + esc(snap.place.name) + ' &middot; ' + esc(snap.targetName) + ' &middot; ' + esc(snap.typeName) + ' &middot; <b>' + snap.pct + '%</b>';
+    $('udName').value = u ? u.name : '';
+    $('udOverRow').hidden = true;
+    setRem('udR', u ? u.rem : null);
+    $('udHint').textContent = '';
+    dlg.hidden = false; setTimeout(function () { $('udName').focus(); }, 50);
+  }
+  function fromSnap(snap, name, id, rem) {
+    return { id: id || ('u' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5)), name: name, t: snap.t, place: snap.place, type: snap.type, target: snap.target, env: snap.env, spot: snap.spot,
+      snap: { pct: snap.pct, label: snap.label, tz: snap.tz || null, code: snap.code, sky: snap.sky, temp: snap.temp, wind: snap.wind, wdir: snap.wdir, wave: snap.wave, typeName: snap.typeName, targetName: snap.targetName, envName: snap.envName, forecast: snap.forecast },
+      rem: rem || { h: 0, m15: false }, created: Date.now(), updated: Date.now() };
+  }
+  $('udNo').onclick = function () { dlg.hidden = true; pending = null; afterSave = null; };
+  $('udName').onkeydown = function (e) { if (e.key === 'Enter') $('udYes').click(); };
+  $('udYes').onclick = function () {
+    var n = $('udName').value.trim();
+    if (!n) { $('udHint').textContent = 'Scrivi un nome per l\u2019uscita.'; $('udName').focus(); return; }
+    var r = readRem('udR'), over = saveMode === 'over' && editId && find(editId);
+    var u = fromSnap(pending, n, over ? editId : null, r);
+    if (over) { var old = find(editId); u.created = old.created; list = list.map(function (x) { return x.id === editId ? u : x; }); }
+    else list.push(u);
+    if (!saveU()) { $('udHint').textContent = 'Salvataggio non riuscito su questo browser.'; return; }
+    editId = u.id; openMap[u.id] = true; saveOpen();
+    dlg.hidden = true; pending = null; showEdit(); refreshAll();
+    if (r.h || r.m15) sendIcs(u);
+    var then = afterSave; afterSave = null; if (then) then(u);
+  };
+  document.querySelectorAll('.outSave').forEach(function (b) { b.onclick = function () { openSave(); }; });
+  document.querySelectorAll('.outNew').forEach(function (b) { b.onclick = function () { openSave(null, 'new'); }; });
+  document.querySelectorAll('.outShare').forEach(function (b) { b.onclick = function () { openSave(function (u) { share('u', u); }); }; });
+
+  // ---------- apri in Pescomante ----------
+  function openInApp(u, editing) {
+    editId = editing ? u.id : null; showEdit();
+    if (window.PescaOpen) window.PescaOpen(u);
+    goMain();
+  }
+
+  // ---------- elenco delle uscite (finestre una sotto l'altra, la più nuova sopra) ----------
+  function detailsHtml(u) {
+    var s = u.snap || {}, met = [];
+    if (s.sky) met.push(skyIcon(s.code) + ' ' + s.sky);
+    if (s.temp != null) met.push(Math.round(s.temp) + '\u00B0C');
+    if (s.wind != null) met.push('vento ' + (s.wdir ? s.wdir + ' ' : '') + Math.round(s.wind) + ' km/h');
+    if (s.wave != null) met.push('onde ' + (+s.wave).toFixed(1) + ' m');
+    return '<dl class="ugrid"><dt>Quando</dt><dd>' + esc(whenTxt(u.t, tzOf(u))) + '</dd><dt>Dove</dt><dd>' + esc(u.place.name) + ' <span class="muted">(' + u.place.lat.toFixed(4) + ', ' + u.place.lon.toFixed(4) + ')</span></dd>' +
+      '<dt>Pesce</dt><dd>' + esc(s.targetName || '') + '</dd><dt>Tecnica</dt><dd>' + esc(s.typeName || '') + ' &middot; ' + (u.spot === 'boat' ? 'in barca' : 'da riva') + '</dd>' +
+      '<dt>Meteo</dt><dd>' + esc(met.join(' \u00B7 ') || (s.forecast ? '' : 'oltre la previsione: stima')) + '</dd>' +
+      '<dt>Probabilit&agrave;</dt><dd><span class="upct" style="color:' + pctColor(s.pct) + '">' + s.pct + '%</span> <span class="muted">' + esc(s.label || '') + ' (quando l&rsquo;hai salvata)</span></dd></dl>';
+  }
+  function btnsHtml(u) {
+    return '<div class="ubtns"><button class="btn raised" data-open="' + u.id + '"><b>Apri in Pescomante</b></button><button class="btn raised" data-share="' + u.id + '">Condividi</button>' +
+      '<button class="btn raised ualarm' + (u.rem && (u.rem.h || u.rem.m15) ? ' on' : '') + '" data-rem="' + u.id + '" title="Promemoria">' + BELL + ' Promemoria</button><button class="btn raised danger" data-del="' + u.id + '">Elimina</button></div>';
+  }
+  function renderList() {
+    var box = $('uList'), a = byT();
+    if (!a.length) { box.innerHTML = '<div class="uempty muted">Nessuna uscita salvata.</div>'; return; }
+    var now = Date.now();
+    box.innerHTML = a.map(function (u) {
+      var open = !!openMap[u.id], tp = tparts(u.t, tzOf(u)), past = u.t < now - 6 * 3600e3;
+      return '<section class="win raised uwin" style="margin-bottom:8px' + (past ? ';opacity:.85' : '') + '"><div class="title"><span>' + esc(u.name) + '<span class="usub">' + tp.d + '/' + (tp.mo + 1) + ' ' + pad(tp.h) + ':' + pad(tp.mi) + ' &middot; ' + (u.snap && u.snap.pct) + '%</span></span>' +
+        '<button class="tbtn raised ualarm' + (u.rem && (u.rem.h || u.rem.m15) ? ' on' : '') + '" data-rem="' + u.id + '" aria-label="Promemoria" title="Promemoria">' + BELL + '</button>' +
+        '<button class="tbtn raised" data-tog="' + u.id + '" aria-label="' + (open ? 'Riduci' : 'Apri') + '">' + (open ? '_' : '\u25A1') + '</button></div>' +
+        (open ? '<div class="body">' + detailsHtml(u) + btnsHtml(u) + '</div>' : '') + '</section>';
+    }).join('');
+  }
+  function onAction(e) {
+    var b = e.target.closest('[data-tog],[data-open],[data-share],[data-rem],[data-del],[data-day]'); if (!b) return;
+    if (b.dataset.tog) { openMap[b.dataset.tog] = !openMap[b.dataset.tog]; saveOpen(); renderList(); return; }
+    var id = b.dataset.open || b.dataset.share || b.dataset.rem || b.dataset.del, u = find(id); if (!u) return;
+    if (b.dataset.open) openInApp(u, true);
+    else if (b.dataset.share) share('u', u);
+    else if (b.dataset.rem) openRem(u);
+    else if (b.dataset.del) confirmDel('Sicuro di voler eliminare l&rsquo;uscita &laquo;' + esc(u.name) + '&raquo;?', function () {
+      list = list.filter(function (x) { return x.id !== id; }); saveU(); if (editId === id) { editId = null; showEdit(); } refreshAll();
+    });
+  }
+  $('uList').addEventListener('click', onAction);
+
+  // ---------- calendario ----------
+  var cY, cM, cSel = null;
+  (function () { var n = new Date(); cY = n.getFullYear(); cM = n.getMonth(); })();
+  function renderCal() {
+    $('cTitle').textContent = MESI[cM] + ' ' + cY;
+    var first = new Date(cY, cM, 1), start = new Date(cY, cM, 1 - ((first.getDay() + 6) % 7)), byDay = {};
+    list.forEach(function (u) { var k = dayKey(u.t, tzOf(u)); (byDay[k] = byDay[k] || []).push(u); });
+    var today = dayKey(Date.now()), h = '<tr><th>L</th><th>M</th><th>M</th><th>G</th><th>V</th><th>S</th><th>D</th></tr>';
+    for (var w = 0; w < 6; w++) {
+      h += '<tr>';
+      for (var i = 0; i < 7; i++) {
+        var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + w * 7 + i), k = dayKey(d.getTime()), ev = byDay[k] || [];
+        var cls = (d.getMonth() !== cM ? 'out ' : '') + (k === today ? 'today ' : '') + (ev.length ? 'has ' : '') + (k === cSel ? 'sel' : '');
+        var inner = '<span class="dn">' + d.getDate() + '</span>';
+        if (ev.length) {
+          ev.sort(function (a, b) { return a.t - b.t; });
+          var best = ev.reduce(function (m, u) { return (u.snap.pct > m.snap.pct) ? u : m; }, ev[0]);
+          inner += '<span class="ci">' + skyIcon(best.snap.code) + '</span><span class="cp">' + best.snap.pct + '%</span>' + (ev.length > 1 ? '<span class="cn">' + ev.length + '</span>' : '');
+        } else if (k === cSel) {
+          inner += '<button class="btn raised unew" data-new="' + k + '" aria-label="Nuova uscita in questo giorno">+</button><span class="unewt">nuova uscita</span>';
+        }
+        h += '<td class="' + cls + '" data-day="' + k + '">' + inner + '</td>';
+      }
+      h += '</tr>';
+      if (w >= 4 && new Date(start.getFullYear(), start.getMonth(), start.getDate() + (w + 1) * 7).getMonth() !== cM) break;
+    }
+    $('cGrid').innerHTML = h;
+    renderDay(byDay);
+  }
+  function renderDay(byDay) {
+    var box = $('cDay');
+    if (!cSel) { box.innerHTML = '<div class="muted" style="margin-top:6px">Tocca un giorno: quelli evidenziati hanno uscite salvate.</div>'; return; }
+    var ev = (byDay[cSel] || []).sort(function (a, b) { return a.t - b.t; }), p = cSel.split('-');
+    var title = GIORNI[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + ' ' + (+p[2]) + ' ' + MESI[+p[1] - 1] + ' ' + p[0];
+    box.innerHTML = '<div style="margin-top:8px;font-weight:bold;text-transform:capitalize">' + title + '</div>' + (ev.length ? ev.map(function (u) {
+      return '<div class="ucard sunken"><h4>' + esc(u.name) + '</h4>' + detailsHtml(u) + btnsHtml(u) + '</div>';
+    }).join('') : '<div class="muted">Nessuna uscita salvata in questo giorno.</div>') +
+      '<div class="ubtns"><button class="btn raised" data-new="' + cSel + '"><b>+ Nuova uscita in questo giorno</b></button></div>';
+  }
+  // nuova uscita: apre Pescomante in quel giorno (alle 7:00) con posto, tecnica e pesce da scegliere
+  function newOuting(k) {
+    var p = k.split('-'), t = new Date(+p[0], +p[1] - 1, +p[2], 7, 0).getTime();
+    editId = null; showEdit();
+    goMain();
+    if (window.PescaNewOuting) window.PescaNewOuting(t);
+  }
+  $('cGrid').addEventListener('click', function (e) {
+    var nb = e.target.closest('[data-new]'); if (nb) { e.stopPropagation(); newOuting(nb.dataset.new); return; }
+    var td = e.target.closest('[data-day]'); if (!td) return; cSel = td.dataset.day === cSel ? null : td.dataset.day; renderCal();
+  });
+  $('cDay').addEventListener('click', function (e) { var nb = e.target.closest('[data-new]'); if (nb) newOuting(nb.dataset.new); });
+  $('cDay').addEventListener('click', onAction);
+  $('cPrev').onclick = function () { cM--; if (cM < 0) { cM = 11; cY--; } renderCal(); };
+  $('cNext').onclick = function () { cM++; if (cM > 11) { cM = 0; cY++; } renderCal(); };
+  $('cToday').onclick = function () { var n = new Date(); cY = n.getFullYear(); cM = n.getMonth(); cSel = dayKey(n.getTime()); renderCal(); };
+  function refreshAll() { if (!deskU.hidden) renderList(); if (!deskC.hidden) renderCal(); }
+
+  // ---------- condivisione: i dati viaggiano dentro il link ----------
+  function enc(o) { var s = unescape(encodeURIComponent(JSON.stringify(o))); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); }
+  function dec(c) { c = c.replace(/-/g, '+').replace(/_/g, '/'); while (c.length % 4) c += '='; return JSON.parse(decodeURIComponent(escape(atob(c)))); }
+  function baseUrl() { return location.origin && location.origin !== 'null' ? location.origin + location.pathname : 'https://fir3dam.github.io/pescomante/'; }
+  function packU(u) { return { k: 'u', n: u.name, t: u.t, p: [u.place.name, +u.place.lat.toFixed(5), +u.place.lon.toFixed(5)], ty: u.type, ta: u.target, e: u.env, s: u.spot, sn: u.snap }; }
+  function unpackU(o) { return { id: null, name: o.n, t: o.t, place: { name: o.p[0], lat: o.p[1], lon: o.p[2] }, type: o.ty, target: o.ta, env: o.e, spot: o.s, snap: o.sn || {}, rem: { h: 0, m15: false } }; }
+  function share(kind, obj) {
+    var pack = kind === 'u' ? packU(obj) : { k: 'p', n: obj.name, a: +obj.lat.toFixed(6), o: +obj.lon.toFixed(6), c: obj.color || null };
+    var url = baseUrl() + '#pm=' + enc(pack);
+    var txt = kind === 'u'
+      ? '\uD83C\uDFA3 Uscita di pesca \u00AB' + obj.name + '\u00BB \u2014 ' + whenTxt(obj.t, tzOf(obj)) + ', ' + obj.place.name + ' (' + (obj.snap.targetName || '') + ', ' + (obj.snap.typeName || '') + '). Aprila in Pescomante: ' + url
+      : '\uD83D\uDCCD Punto di pesca \u00AB' + obj.name + '\u00BB (' + obj.lat.toFixed(5) + ', ' + obj.lon.toFixed(5) + '). Aprilo in Pescomante: ' + url;
+    if (navigator.share) { navigator.share({ title: 'Pescomante', text: txt }).catch(function () {}); return; }
+    $('usTitle').textContent = kind === 'u' ? 'Condividi l\u2019uscita' : 'Condividi il punto';
+    $('usText').textContent = txt;
+    $('usWa').href = 'https://wa.me/?text=' + encodeURIComponent(txt);
+    $('usMail').href = 'mailto:?subject=' + encodeURIComponent('Pescomante: ' + obj.name) + '&body=' + encodeURIComponent(txt);
+    $('usCopy').onclick = function () { copy(txt, $('usCopy')); };
+    shareDlg.hidden = false;
+  }
+  $('usClose').onclick = function () { shareDlg.hidden = true; };
+  function copy(t, btn) {
+    var ok = function () { if (btn) { var o = btn.textContent; btn.textContent = 'Copiato!'; setTimeout(function () { btn.textContent = o; }, 1500); } };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok, function () { prompt('Copia:', t); });
+    else prompt('Copia:', t);
+  }
+  window.PescaShare = share;
+
+  // ---------- ricevere: link aperto, o incollato in Start → INCOLLA QUI ----------
+  var got = null, gotLink = '';
+  function parseShare(text) { var m = /#pm=([A-Za-z0-9_-]+)/.exec(text || ''); if (!m) return null; try { return { o: dec(m[1]), link: baseUrl() + '#pm=' + m[1] }; } catch (e) { return null; } }
+  function showRecv(o, link) {
+    got = o; gotLink = link || '';
+    $('uvHelp').hidden = true; $('uvView').hidden = false; $('uvSave').hidden = false;
+    if (o.k === 'p') {
+      $('uvTitle').textContent = 'Ti hanno condiviso un punto';
+      $('uvText').innerHTML = '\uD83D\uDCCD <b>' + esc(o.n) + '</b><br><span class="muted">' + o.a.toFixed(5) + ', ' + o.o.toFixed(5) + '</span>';
+      $('uvSave').innerHTML = '<b>Salva punto</b>'; $('uvView').innerHTML = '<b>Visualizza punto</b>';
+    } else {
+      var u = unpackU(o);
+      $('uvTitle').textContent = 'Ti hanno condiviso un\u2019uscita';
+      $('uvText').innerHTML = '\uD83C\uDFA3 <b>' + esc(u.name) + '</b>' + detailsHtml(u);
+      $('uvSave').innerHTML = '<b>Salva uscita</b>'; $('uvView').innerHTML = '<b>Visualizza</b>';
+    }
+    recv.hidden = false;
+  }
+  function applyRecv(save) {
+    var o = got; if (!o) return; recv.hidden = true;
+    if (o.k === 'p') { if (window.PuntiReceive) window.PuntiReceive({ name: o.n, lat: o.a, lon: o.o, color: o.c }, save); return; }
+    var u = unpackU(o);
+    if (save) {
+      var dup = list.filter(function (x) { return x.t === u.t && x.name === u.name && Math.abs(x.place.lat - u.place.lat) < 1e-4; })[0];
+      if (!dup) { u.id = 'u' + Date.now().toString(36); u.created = u.updated = Date.now(); list.push(u); saveU(); }
+      openInApp(dup || u, true);
+    } else openInApp(u, false);
+  }
+  $('uvView').onclick = function () { applyRecv(false); };
+  $('uvSave').onclick = function () {
+    if (isStandalone() || !got) { applyRecv(true); return; }
+    // nel browser: chi ha l'app installata la salva lì con Start → INCOLLA QUI
+    $('uvView').hidden = true; $('uvSave').hidden = true; $('uvHelp').hidden = false;
+    $('uvHelp').innerHTML = '<div class="sunken" style="padding:6px"><b>Hai Pescomante sulla schermata Home?</b><br>1. Tocca <b>Copia</b><br>2. Apri Pescomante dalla Home<br>3. <b>Start</b> &rarr; <span style="background:#c00000;color:#fff;font-weight:bold;padding:0 4px">INCOLLA QUI</span> e incolla</div>' +
+      '<div class="row" style="gap:6px;flex-wrap:wrap;margin-top:8px;justify-content:flex-end"><button class="btn raised" id="uvCopy"><b>Copia</b></button><button class="btn raised" id="uvHere">Salva qui nel browser</button></div>';
+    $('uvCopy').onclick = function () { copy(gotLink, $('uvCopy')); };
+    $('uvHere').onclick = function () { applyRecv(true); };
+  };
+  window.PescaPasteShare = function () { $('uPasteTxt').value = ''; $('upHint').textContent = ''; pasteDlg.hidden = false; setTimeout(function () { $('uPasteTxt').focus(); }, 50); var sm = $('startMenu'); if (sm) sm.hidden = true; };
+  $('upNo').onclick = function () { pasteDlg.hidden = true; };
+  $('upYes').onclick = function () {
+    var r = parseShare($('uPasteTxt').value);
+    if (!r) { $('upHint').textContent = 'Non trovo un punto o un\u2019uscita di Pescomante in quello che hai incollato.'; return; }
+    pasteDlg.hidden = true; showRecv(r.o, r.link);
+  };
+  // link aperto: aspetto che chi lo riceve abbia scelto tema e zona (benvenuto), poi il popup
+  (function () {
+    var r = parseShare(location.hash); if (!r) return;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+    var tries = 0, iv = setInterval(function () {
+      var w = $('welcome'), ready = (!w || w.hidden) && !!(window.PescaSnap && window.PescaSnap());
+      if (ready || ++tries > 120) { clearInterval(iv); showRecv(r.o, r.link); }
+    }, 500);
+  })();
+
+  showEdit();
 })();
 
 </script>
