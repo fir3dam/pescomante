@@ -94,6 +94,11 @@ body {
   .mgrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
   .g-top, .g-sp { grid-column: 1 / -1; }
 }
+.radarbtns .btn { min-height: 24px; padding: 2px 10px; font-size: 11px; }
+.radarbox { height: 440px; position: relative; padding: 2px; }
+.radarbox iframe { width: 100%; height: 100%; border: 0; display: block; }
+.radarcover { position: absolute; inset: 2px; display: grid; place-content: center; gap: 8px; justify-items: center; text-align: center; padding: 12px; }
+@media (min-width: 980px) { .g-radar { grid-column: 1 / -1; } }
 .topgrid { display: grid; grid-template-columns: minmax(0, 1fr) 112px; gap: 10px; align-items: start; }
 @media (max-width: 420px) { .topgrid { grid-template-columns: minmax(0, 1fr) 84px; } }
 .topgrid .grid4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -317,7 +322,7 @@ canvas.chart { width: 100%; display: block; }
           <div class="topgrid">
             <div class="topctl">
               <div class="row">
-                <label class="lbl grow"><span><u>L</u>ocalit&agrave;</span><input class="field sunken" id="place" autocomplete="off" placeholder="Es. Lignano, Venezia, Rimini"></label>
+                <label class="lbl grow"><span><u>L</u>ocalit&agrave;</span><input class="field sunken" id="place" autocomplete="off" placeholder="Es. Lignano, Venezia, Rimini o 45.68, 13.12"></label>
                 <button class="btn raised" id="searchBtn">Cerca</button>
                 <button class="btn raised" id="gpsBtn" title="Usa la mia posizione">GPS</button>
               </div>
@@ -373,10 +378,23 @@ canvas.chart { width: 100%; display: block; }
           <div class="sunken" style="padding:2px"><canvas class="chart" id="tideChart" height="150"></canvas></div>
           <div class="tides" id="tideList"></div>
           <div class="muted" id="tideNote"></div>
+          <label class="lbl"><span>Ora (cambia anche quella in alto)</span><input type="range" id="slider2" min="0" max="47" step="1" aria-label="Ora del giorno, sotto la marea"></label>
         </fieldset>
 
         <fieldset class="grp g-meteo"><legend>Meteo e mare</legend>
           <div class="sparks" id="sparks"></div><dl class="props sunken" id="meteo"></dl>
+        </fieldset>
+
+        <fieldset class="grp g-radar"><legend>Radar e previsioni</legend>
+          <div class="row radarbtns" id="radarBtns">
+            <button class="btn raised on" data-ov="rain">Pioggia</button><button class="btn raised" data-ov="wind">Vento</button><button class="btn raised" data-ov="clouds">Nuvole</button><button class="btn raised" data-ov="waves">Onde</button><button class="btn raised" data-ov="temp">Temperatura</button>
+          </div>
+          <div class="radarbox sunken" id="radarBox">
+            <div class="radarcover" id="radarCover"><button class="btn raised" id="radarOpen"><b>Apri mappa</b></button><span class="muted">La mappa si carica solo quando la apri.</span></div>
+            <iframe id="radarFrame" title="Mappa meteo di Windy" hidden allowfullscreen></iframe>
+          </div>
+          <div class="row" style="justify-content:space-between;align-items:center"><span class="muted">Per i prossimi giorni usa la barra del tempo in basso nella mappa (fino a circa 10 giorni). Qui posto, data e ora non cambiano il resto dell&rsquo;app.</span><button class="btn raised" id="radarCenter">Centra sul posto</button></div>
+          <div class="muted" style="font-size:11px">Mappa e previsioni: Windy.com</div>
         </fieldset>
 
         <fieldset class="grp g-sp"><legend>Tutte le specie qui</legend>
@@ -490,68 +508,103 @@ var PescaEngine = (function () {
   // wave: onda [min, ottimo-da, ottimo-a, max] metri
   // moon: 'new' preferisce notti buie, 'full' notti chiare, null indifferente
   var SPECIES = [
-    { id: 'branzino', name: 'Branzino', hab: 'sea', season: [.7,.6,.6,.7,.8,.6,.5,.5,.7,.95,1,.9], temp: [7,11,23,29], light: [1,.45,1,.8], tide: .9, wave: [0,.4,1.2,2.2], moon: null },
-    { id: 'orata', name: 'Orata', hab: 'sea', season: [.2,.15,.2,.4,.7,.9,1,1,1,.9,.6,.3], temp: [12,17,26,29], light: [.8,.9,.7,.4], tide: .7, wave: [0,0,.5,1.2], moon: 'full' },
-    { id: 'serra', name: 'Serra', hab: 'sea', season: [0,0,0,.1,.3,.6,.9,1,1,.8,.3,.05], temp: [15,19,26,29], light: [1,.7,1,.2], tide: .6, wave: [0,.2,1,1.8], moon: null },
-    { id: 'sgombro', name: 'Sgombro', hab: 'sea', season: [.1,.1,.2,.5,.8,.9,.8,.7,.8,.7,.4,.2], temp: [8,11,22,26], light: [1,.8,1,.3], tide: .5, wave: [0,0,.6,1.5], moon: null },
-    { id: 'sugarello', name: 'Sugarello', hab: 'sea', season: [.2,.2,.3,.5,.7,.9,1,1,.9,.7,.4,.2], temp: [12,15,24,28], light: [1,.6,1,.6], tide: .4, wave: [0,0,.6,1.4], moon: null },
-    { id: 'leccia', name: 'Leccia amia', hab: 'sea', season: [0,0,0,.1,.3,.5,.7,.9,1,1,.6,.2], temp: [16,20,27,30], light: [1,.7,1,.2], tide: .5, wave: [0,.2,1,1.8], moon: null },
-    { id: 'alletterato', name: 'Alletterato', hab: 'sea', season: [.1,.05,.1,.3,.5,.5,.6,.8,1,1,.9,.5], temp: [12,16,27,30], light: [1,.7,1,.1], tide: .3, wave: [0,0,.8,1.6], moon: null },
-    { id: 'tonno', name: 'Tonno rosso', hab: 'sea', season: [.15,.05,0,.05,.2,.5,.75,.9,1,1,.9,.5], temp: [10,14,25,29], light: [1,.7,.9,.3], tide: .3, wave: [0,0,1,2], moon: null },
-    { id: 'cefalo', name: 'Cefalo', hab: 'both', season: [.5,.5,.6,.8,.9,1,1,1,1,.9,.8,.6], temp: [8,14,27,30], light: [.9,1,.9,.4], tide: .5, wave: [0,0,.5,1.2], moon: null },
-    { id: 'seppia', name: 'Seppia', hab: 'sea', season: [.3,.4,.8,1,.9,.5,.3,.3,.5,.8,.9,.6], temp: [10,14,24,28], light: [.8,.5,.9,.9], tide: .5, wave: [0,0,.3,.8], moon: 'new' },
-    { id: 'calamaro', name: 'Calamaro', hab: 'sea', season: [1,.9,.6,.3,.1,.05,.05,.1,.3,.7,1,1], temp: [10,12,18,23], light: [.5,.1,.8,1], tide: .5, wave: [0,0,.4,1], moon: 'new' },
-    { id: 'anguilla', name: 'Anguilla', hab: 'both', season: [.2,.2,.4,.6,.8,.9,1,1,.9,.8,.6,.3], temp: [9,14,26,30], light: [.4,.2,.8,1], tide: .4, wave: [0,0,.6,1.5], moon: 'new' },
-    { id: 'trota', name: 'Trota', hab: 'fresh', season: [.4,.5,.8,1,1,.8,.6,.6,.8,.6,.4,.4], temp: [3,9,17,21], light: [1,.6,1,.2], tide: 0, wave: null, moon: null },
-    { id: 'luccio', name: 'Luccio', hab: 'fresh', season: [.8,.8,.6,.5,.85,.75,.6,.6,.8,1,1,.9], temp: [2,8,20,26], light: [1,.7,.9,.2], tide: 0, wave: null, moon: null },
-    { id: 'persico', name: 'Persico reale', hab: 'fresh', season: [.4,.4,.6,.5,.7,.8,.8,.8,.9,1,.8,.5], temp: [4,12,22,27], light: [1,.8,1,.2], tide: 0, wave: null, moon: null },
-    { id: 'bass', name: 'Black bass', hab: 'fresh', season: [.1,.1,.3,.6,.9,1,1,1,1,.8,.4,.1], temp: [7,18,29,33], light: [1,.6,1,.3], tide: 0, wave: null, moon: null },
-    { id: 'carpa', name: 'Carpa', hab: 'fresh', season: [.2,.3,.6,.9,1,.8,.8,.8,1,.8,.5,.2], temp: [8,16,26,30], light: [.9,.6,.9,1], tide: 0, wave: null, moon: null },
-    { id: 'siluro', name: 'Siluro', hab: 'fresh', season: [.1,.1,.3,.6,.9,1,1,1,.9,.6,.3,.1], temp: [10,20,28,32], light: [.6,.3,.8,1], tide: 0, wave: null, moon: null },
-    { id: 'snakehead', name: 'Snakehead', hab: 'fresh', season: [.5,.5,.6,.8,1,1,1,1,.9,.8,.6,.5], temp: [12,20,32,36], light: [1,.6,1,.4], tide: 0, wave: null, moon: null },
-    { id: 'peacock', name: 'Peacock bass', hab: 'fresh', season: [.9,.9,.85,.8,.8,.85,.9,1,1,1,.95,.9], temp: [18,24,32,35], light: [1,.9,.9,.1], tide: 0, wave: null, moon: null },
-    { id: 'barramundi', name: 'Barramundi', hab: 'both', season: [.8,.8,.9,.9,1,1,1,1,.9,.9,.8,.8], temp: [19,26,33,36], light: [1,.5,1,.8], tide: .8, wave: [0,0,.6,1.5], moon: null },
-    { id: 'ayu', name: 'Ayu', hab: 'fresh', season: [0,0,0,0,.2,.8,1,1,.9,.5,.1,0], temp: [10,15,24,27], light: [.6,1,.7,0], tide: 0, wave: null, moon: null },
-    { id: 'gt', name: 'GT (carango gigante)', hab: 'sea', season: [.9,.9,.9,.95,1,1,1,1,1,1,.95,.9], temp: [22,25,30,33], light: [1,.7,1,.3], tide: .8, wave: [0,.3,1.2,2.2], moon: null },
-    { id: 'hucho', name: 'Hucho (huchen/taimen)', hab: 'fresh', season: [.7,.6,.4,.2,.1,.1,.1,.2,.5,.9,1,.9], temp: [0,3,12,17], light: [1,.6,1,.3], tide: 0, wave: null, moon: null },
+    { id: 'branzino', name: 'Branzino', hab: 'sea', season: [.7,.6,.6,.7,.8,.6,.5,.5,.7,.95,1,.9], temp: [7,11,23,29], light: [0.9,0.4,1,0.8], tide: .9, wave: [0,.4,1.2,2.2], moon: null },
+    { id: 'orata', name: 'Orata', hab: 'sea', season: [.2,.15,.2,.4,.7,.9,1,1,1,.9,.6,.3], temp: [12,17,26,29], light: [0.9,0.8,0.8,0.3], tide: .7, wave: [0,0,.5,1.2], moon: null },
+    { id: 'serra', name: 'Serra', hab: 'sea', season: [0,0,0,.1,.3,.6,.9,1,1,.8,.3,.05], temp: [15,19,26,29], light: [1,0.5,1,0.7], tide: .6, wave: [0,.2,1,1.8], moon: null },
+    { id: 'sgombro', name: 'Sgombro', hab: 'sea', season: [.1,.1,.2,.5,.8,.9,.8,.7,.8,.7,.4,.2], temp: [8,11,22,26], light: [0.9,0.8,0.9,0.2], tide: .5, wave: [0,0,.6,1.5], moon: null },
+    { id: 'sugarello', name: 'Sugarello', hab: 'sea', season: [.2,.2,.3,.5,.7,.9,1,1,.9,.7,.4,.2], temp: [12,15,24,28], light: [0.8,0.4,0.9,1], tide: .4, wave: [0,0,.6,1.4], moon: null },
+    { id: 'leccia', name: 'Leccia amia', hab: 'sea', season: [0,0,0,.1,.3,.5,.7,.9,1,1,.6,.2], temp: [16,20,27,30], light: [1,0.6,0.9,0.2], tide: .5, wave: [0,.2,1,1.8], moon: null },
+    { id: 'alletterato', name: 'Alletterato', hab: 'sea', season: [.1,.05,.1,.3,.5,.5,.6,.8,1,1,.9,.5], temp: [12,16,27,30], light: [1,0.8,0.9,0.1], tide: .3, wave: [0,0,.8,1.6], moon: null },
+    { id: 'tonno', name: 'Tonno rosso', hab: 'sea', season: [.15,.05,0,.05,.2,.5,.75,.9,1,1,.9,.5], temp: [10,14,25,29], light: [1,0.7,0.9,0.4], tide: .3, wave: [0,0,1,2], moon: null },
+    { id: 'cefalo', name: 'Cefalo', hab: 'both', season: [.5,.5,.6,.8,.9,1,1,1,1,.9,.8,.6], temp: [8,14,27,30], light: [0.8,1,0.8,0.2], tide: .5, wave: [0,0,.5,1.2], moon: null },
+    { id: 'seppia', name: 'Seppia', hab: 'sea', season: [.3,.4,.8,1,.9,.5,.3,.3,.5,.8,.9,.6], temp: [10,14,24,28], light: [0.9,0.5,1,0.7], tide: .5, wave: [0,0,.3,.8], moon: null },
+    { id: 'calamaro', name: 'Calamaro', hab: 'sea', season: [1,.9,.6,.3,.1,.05,.05,.1,.3,.7,1,1], temp: [10,12,18,23], light: [0.8,0.2,1,0.9], tide: .5, wave: [0,0,.4,1], moon: 'new' },
+    { id: 'anguilla', name: 'Anguilla', hab: 'both', season: [.2,.2,.4,.6,.8,.9,1,1,.9,.8,.6,.3], temp: [9,14,26,30], light: [0.4,0.1,0.8,1], tide: .4, wave: [0,0,.6,1.5], moon: 'new' },
+    { id: 'trota', name: 'Trota', hab: 'fresh', season: [.4,.5,.8,1,1,.8,.6,.6,.8,.6,.4,.4], temp: [3,9,17,21], light: [1,0.6,0.9,0.4], tide: 0, wave: null, moon: null },
+    { id: 'luccio', name: 'Luccio', hab: 'fresh', season: [.8,.8,.6,.5,.85,.75,.6,.6,.8,1,1,.9], temp: [2,8,20,26], light: [0.9,0.7,1,0.1], tide: 0, wave: null, moon: null },
+    { id: 'persico', name: 'Persico reale', hab: 'fresh', season: [.4,.4,.6,.5,.7,.8,.8,.8,.9,1,.8,.5], temp: [4,12,22,27], light: [1,0.6,0.9,0.1], tide: 0, wave: null, moon: null },
+    { id: 'bass', name: 'Black bass', hab: 'fresh', season: [.1,.1,.3,.6,.9,1,1,1,1,.8,.4,.1], temp: [7,18,29,33], light: [1,0.5,1,0.6], tide: 0, wave: null, moon: null },
+    { id: 'carpa', name: 'Carpa', hab: 'fresh', season: [.2,.3,.6,.9,1,.8,.8,.8,1,.8,.5,.2], temp: [8,16,26,30], light: [0.9,0.5,0.9,0.8], tide: 0, wave: null, moon: null },
+    { id: 'siluro', name: 'Siluro', hab: 'fresh', season: [.1,.1,.3,.6,.9,1,1,1,.9,.6,.3,.1], temp: [10,20,28,32], light: [0.6,0.2,0.9,1], tide: 0, wave: null, moon: 'new' },
+    { id: 'snakehead', name: 'Snakehead', hab: 'fresh', season: [.5,.5,.6,.8,1,1,1,1,.9,.8,.6,.5], temp: [12,20,32,36], light: [0.9,0.7,1,0.4], tide: 0, wave: null, moon: null },
+    { id: 'peacock', name: 'Peacock bass', hab: 'fresh', season: [.9,.9,.85,.8,.8,.85,.9,1,1,1,.95,.9], temp: [18,24,32,35], light: [0.9,1,0.8,0], tide: 0, wave: null, moon: null },
+    { id: 'barramundi', name: 'Barramundi', hab: 'both', season: [.8,.8,.9,.9,1,1,1,1,.9,.9,.8,.8], temp: [19,26,33,36], light: [0.9,0.4,1,0.8], tide: .8, wave: [0,0,.6,1.5], moon: null },
+    { id: 'ayu', name: 'Ayu', hab: 'fresh', season: [0,0,0,0,.2,.8,1,1,.9,.5,.1,0], temp: [10,15,24,27], light: [0.8,1,0.7,0.1], tide: 0, wave: null, moon: null },
+    { id: 'gt', name: 'GT (carango gigante)', hab: 'sea', season: [.9,.9,.9,.95,1,1,1,1,1,1,.95,.9], temp: [22,25,30,33], light: [1,0.6,0.9,0.5], tide: .8, wave: [0,.3,1.2,2.2], moon: null },
+    { id: 'hucho', name: 'Hucho (huchen/taimen)', hab: 'fresh', season: [.7,.6,.4,.2,.1,.1,.1,.2,.5,.9,1,.9], temp: [0,3,12,17], light: [0.9,0.5,1,0.6], tide: 0, wave: null, moon: null },
     // --- Mediterraneo ---
-    { id: 'ricciola', name: 'Ricciola', hab: 'sea', season: [.1,.1,.1,.2,.4,.7,.85,.9,1,1,.7,.35], temp: [16,20,27,30], light: [1,.7,1,.2], tide: .5, wave: [0,.2,1,2], moon: null },
-    { id: 'dentice', name: 'Dentice', hab: 'sea', season: [.2,.2,.3,.65,.9,1,.8,.7,.9,1,.8,.4], temp: [13,16,24,27], light: [1,.8,.9,.1], tide: .4, wave: [0,0,.8,1.5], moon: null },
-    { id: 'sarago', name: 'Sarago', hab: 'sea', season: [.8,.8,.7,.6,.6,.6,.6,.6,.7,.9,1,1], temp: [10,14,24,28], light: [1,.6,1,.7], tide: .7, wave: [.2,.5,1.5,2.5], moon: null },
-    { id: 'lampuga', name: 'Lampuga (mahi-mahi)', hab: 'sea', season: [.85,.85,.85,.85,.9,1,1,1,1,1,.9,.85], temp: [20,23,29,31], light: [1,.8,.9,.1], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
-    { id: 'barracuda', name: 'Barracuda', hab: 'sea', season: [.85,.85,.85,.9,.9,1,1,1,1,1,.9,.85], temp: [14,18,30,33], light: [1,.6,1,.4], tide: .6, wave: [0,0,1,2], moon: null },
+    { id: 'ricciola', name: 'Ricciola', hab: 'sea', season: [.1,.1,.1,.2,.4,.7,.85,.9,1,1,.7,.35], temp: [16,20,27,30], light: [1,0.6,0.9,0.3], tide: .5, wave: [0,.2,1,2], moon: null },
+    { id: 'dentice', name: 'Dentice', hab: 'sea', season: [.2,.2,.3,.65,.9,1,.8,.7,.9,1,.8,.4], temp: [13,16,24,27], light: [1,0.6,0.9,0.2], tide: .4, wave: [0,0,.8,1.5], moon: null },
+    { id: 'sarago', name: 'Sarago', hab: 'sea', season: [.8,.8,.7,.6,.6,.6,.6,.6,.7,.9,1,1], temp: [10,14,24,28], light: [0.9,0.7,0.9,0.5], tide: .7, wave: [.2,.5,1.5,2.5], moon: null },
+    { id: 'lampuga', name: 'Lampuga (mahi-mahi)', hab: 'sea', season: [.85,.85,.85,.85,.9,1,1,1,1,1,.9,.85], temp: [20,23,29,31], light: [0.9,1,0.8,0.1], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
+    { id: 'barracuda', name: 'Barracuda', hab: 'sea', season: [.85,.85,.85,.9,.9,1,1,1,1,1,.9,.85], temp: [14,18,30,33], light: [0.9,0.3,1,0.8], tide: .6, wave: [0,0,1,2], moon: null },
     // --- acque interne Europa ---
-    { id: 'lucioperca', name: 'Lucioperca', hab: 'fresh', season: [.8,.7,.6,.4,.4,.6,.6,.6,.8,1,1,.9], temp: [4,12,26,30], light: [1,.4,1,.9], tide: 0, wave: null, moon: null },
-    { id: 'temolo', name: 'Temolo', hab: 'fresh', season: [.5,.5,.4,.4,.5,.8,.9,.9,1,1,.8,.6], temp: [2,7,16,20], light: [.8,1,.9,.1], tide: 0, wave: null, moon: null },
+    { id: 'lucioperca', name: 'Lucioperca', hab: 'fresh', season: [.8,.7,.6,.4,.4,.6,.6,.6,.8,1,1,.9], temp: [4,12,26,30], light: [0.9,0.3,1,0.9], tide: 0, wave: null, moon: 'new' },
+    { id: 'temolo', name: 'Temolo', hab: 'fresh', season: [.5,.5,.4,.4,.5,.8,.9,.9,1,1,.8,.6], temp: [2,7,16,20], light: [0.7,1,0.8,0.1], tide: 0, wave: null, moon: null },
     // --- Nord America ---
-    { id: 'muskie', name: 'Muskie', hab: 'fresh', season: [.3,.3,.3,.4,.5,.7,.7,.7,.9,1,.9,.5], temp: [4,12,24,28], light: [1,.6,1,.3], tide: 0, wave: null, moon: null },
-    { id: 'walleye', name: 'Walleye', hab: 'fresh', season: [.6,.6,.5,.4,1,.9,.7,.7,.8,.9,.9,.7], temp: [3,10,23,26], light: [1,.3,1,.8], tide: 0, wave: null, moon: null },
-    { id: 'salmone', name: 'Salmone atlantico', hab: 'fresh', season: [.3,.3,.4,.5,.6,.9,1,.9,.7,.5,.3,.2], temp: [4,8,16,20], light: [1,.6,1,.3], tide: 0, wave: null, moon: null },
-    { id: 'salmonepac', name: 'Salmone del Pacifico (king, coho)', hab: 'both', season: [0,0,.1,.2,.4,.7,.9,1,1,.7,.2,0], temp: [5,8,14,18], light: [1,.6,1,.3], tide: .4, wave: [0,0,1,2], moon: null },
-    { id: 'striper', name: 'Striped bass', hab: 'both', season: [.2,.2,.4,.7,1,.8,.5,.5,.7,1,.9,.4], temp: [7,12,20,25], light: [1,.5,1,.8], tide: .8, wave: [0,.3,1.2,2], moon: null },
-    { id: 'redfish', name: 'Red drum (redfish)', hab: 'both', season: [.6,.6,.7,.8,.8,.8,.8,.9,1,1,.9,.7], temp: [10,18,28,31], light: [1,.7,1,.6], tide: .9, wave: [0,0,.8,1.5], moon: null },
+    { id: 'muskie', name: 'Muskie', hab: 'fresh', season: [.3,.3,.3,.4,.5,.7,.7,.7,.9,1,.9,.5], temp: [4,12,24,28], light: [0.9,0.6,1,0.4], tide: 0, wave: null, moon: null },
+    { id: 'walleye', name: 'Walleye', hab: 'fresh', season: [.6,.6,.5,.4,1,.9,.7,.7,.8,.9,.9,.7], temp: [3,10,23,26], light: [0.9,0.2,1,0.9], tide: 0, wave: null, moon: 'new' },
+    { id: 'salmone', name: 'Salmone atlantico', hab: 'fresh', season: [.3,.3,.4,.5,.6,.9,1,.9,.7,.5,.3,.2], temp: [4,8,16,20], light: [1,0.6,0.9,0.2], tide: 0, wave: null, moon: null },
+    { id: 'salmonepac', name: 'Salmone del Pacifico (king, coho)', hab: 'both', season: [0,0,.1,.2,.4,.7,.9,1,1,.7,.2,0], temp: [5,8,14,18], light: [1,0.7,0.9,0.2], tide: .4, wave: [0,0,1,2], moon: null },
+    { id: 'striper', name: 'Striped bass', hab: 'both', season: [.2,.2,.4,.7,1,.8,.5,.5,.7,1,.9,.4], temp: [7,12,20,25], light: [0.9,0.4,1,0.9], tide: .8, wave: [0,.3,1.2,2], moon: null },
+    { id: 'redfish', name: 'Red drum (redfish)', hab: 'both', season: [.6,.6,.7,.8,.8,.8,.8,.9,1,1,.9,.7], temp: [10,18,28,31], light: [0.9,0.6,0.9,0.7], tide: .9, wave: [0,0,.8,1.5], moon: null },
     // --- tropici: flats e costa ---
-    { id: 'tarpon', name: 'Tarpon', hab: 'both', season: [.2,.2,.4,.7,1,1,.9,.7,.5,.4,.3,.2], temp: [20,24,30,34], light: [1,.6,1,.7], tide: .8, wave: [0,0,.8,1.5], moon: null },
-    { id: 'bonefish', name: 'Bonefish', hab: 'sea', season: [.7,.7,.9,1,1,.9,.8,.8,.9,1,.9,.7], temp: [20,23,29,32], light: [.8,1,.8,.1], tide: 1, wave: [0,0,.5,1], moon: null },
-    { id: 'permit', name: 'Permit', hab: 'sea', season: [.4,.5,.8,1,1,.9,.8,.8,.7,.6,.5,.4], temp: [21,24,30,33], light: [.6,1,.7,.2], tide: .9, wave: [0,0,.6,1.2], moon: null },
-    { id: 'snook', name: 'Snook (robalo)', hab: 'both', season: [.5,.5,.7,.9,1,1,1,1,.9,.9,.7,.5], temp: [15,22,30,33], light: [1,.5,1,.9], tide: .9, wave: [0,0,.8,1.5], moon: null },
+    { id: 'tarpon', name: 'Tarpon', hab: 'both', season: [.2,.2,.4,.7,1,1,.9,.7,.5,.4,.3,.2], temp: [20,24,30,34], light: [1,0.5,0.9,0.8], tide: .8, wave: [0,0,.8,1.5], moon: null },
+    { id: 'bonefish', name: 'Bonefish', hab: 'sea', season: [.7,.7,.9,1,1,.9,.8,.8,.9,1,.9,.7], temp: [20,23,29,32], light: [0.8,1,0.8,0.2], tide: 1, wave: [0,0,.5,1], moon: null },
+    { id: 'permit', name: 'Permit', hab: 'sea', season: [.4,.5,.8,1,1,.9,.8,.8,.7,.6,.5,.4], temp: [21,24,30,33], light: [0.8,1,0.8,0.2], tide: .9, wave: [0,0,.6,1.2], moon: null },
+    { id: 'snook', name: 'Snook (robalo)', hab: 'both', season: [.5,.5,.7,.9,1,1,1,1,.9,.9,.7,.5], temp: [15,22,30,33], light: [0.9,0.4,1,0.9], tide: .9, wave: [0,0,.8,1.5], moon: null },
     // --- tropici: altura ---
-    { id: 'vela', name: 'Pesce vela', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [22,25,29,31], light: [1,.9,.9,.1], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
-    { id: 'wahoo', name: 'Wahoo', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [19,23,28,31], light: [1,.8,.9,.2], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
-    { id: 'pinnagialla', name: 'Tonno pinna gialla', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [18,23,30,32], light: [1,.8,.9,.4], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
-    { id: 'sgombroreale', name: 'Sgombro reale (king/spanish mackerel)', hab: 'sea', season: [.2,.2,.4,.7,.9,1,1,1,1,.8,.5,.3], temp: [20,23,29,32], light: [1,.7,1,.3], tide: .5, wave: [0,.2,1.2,2], moon: null },
+    { id: 'vela', name: 'Pesce vela', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [22,25,29,31], light: [0.9,1,0.8,0.1], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
+    { id: 'wahoo', name: 'Wahoo', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [19,23,28,31], light: [1,0.8,0.9,0.1], tide: .1, wave: [0,.3,1.5,2.5], moon: 'full' },
+    { id: 'pinnagialla', name: 'Tonno pinna gialla', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [18,23,30,32], light: [1,0.8,0.9,0.4], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
+    { id: 'sgombroreale', name: 'Sgombro reale (king/spanish mackerel)', hab: 'sea', season: [.2,.2,.4,.7,.9,1,1,1,1,.8,.5,.3], temp: [20,23,29,32], light: [1,0.7,0.9,0.2], tide: .5, wave: [0,.2,1.2,2], moon: null },
     // --- fiumi esotici ---
-    { id: 'dorado', name: 'Dorado (golden dorado)', hab: 'fresh', season: [.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8], temp: [16,20,29,32], light: [1,.7,1,.3], tide: 0, wave: null, moon: null },
-    { id: 'tigre', name: 'Pesce tigre', hab: 'fresh', season: [.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8], temp: [18,22,30,33], light: [1,.8,1,.3], tide: 0, wave: null, moon: null },
-    { id: 'nilo', name: 'Persico del Nilo', hab: 'fresh', season: [.7,.7,.9,1,1,1,1,.9,.8,.8,.7,.7], temp: [22,24,30,32], light: [1,.7,1,.5], tide: 0, wave: null, moon: null },
-    { id: 'arapaima', name: 'Arapaima', hab: 'fresh', season: [.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6], temp: [24,26,31,34], light: [1,.8,1,.3], tide: 0, wave: null, moon: null },
-    { id: 'mahseer', name: 'Mahseer', hab: 'fresh', season: [.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6], temp: [14,18,26,29], light: [1,.7,1,.3], tide: 0, wave: null, moon: null },
-    { id: 'smallmouth', name: 'Smallmouth bass', hab: 'fresh', season: [.2,.2,.4,.7,1,.9,.8,.8,.9,1,.7,.3], temp: [8,15,26,29], light: [1,.7,1,.2], tide: 0, wave: null, moon: null },
-    { id: 'grongo', name: 'Grongo', hab: 'sea', season: [.8,.8,.8,.8,.8,.7,.7,.7,.8,.9,1,.9], temp: [8,11,20,25], light: [.4,.1,.7,1], tide: .4, wave: [0,0,1,2], moon: 'new' },
-    { id: 'cavedano', name: 'Cavedano', hab: 'fresh', season: [.6,.6,.7,.8,.8,.9,1,1,1,.9,.8,.7], temp: [1,7,25,29], light: [1,.9,1,.4], tide: 0, wave: null, moon: null },
-    { id: 'akame', name: 'Akame', hab: 'both', season: [.2,.2,.3,.5,.7,.9,1,1,1,.8,.5,.3], temp: [16,22,29,31], light: [1,.3,1,1], tide: .8, wave: [0,0,.8,1.5], moon: null },
-    { id: 'suzuki', name: 'Seabass giapponese (suzuki)', hab: 'both', season: [.4,.4,.6,.8,.8,.7,.7,.8,1,1,.9,.6], temp: [8,14,27,31], light: [1,.5,1,.9], tide: .9, wave: [0,.3,1.2,2], moon: null },
-    { id: 'murraycod', name: 'Murray cod', hab: 'fresh', season: [.7,.7,.7,.7,.7,.7,.7,.7,.7,.7,.7,.7], temp: [10,16,26,30], light: [1,.6,1,.8], tide: 0, wave: null, moon: null }
+    { id: 'dorado', name: 'Dorado (golden dorado)', hab: 'fresh', season: [.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8], temp: [16,20,29,32], light: [0.9,1,0.9,0.1], tide: 0, wave: null, moon: null },
+    { id: 'tigre', name: 'Pesce tigre', hab: 'fresh', season: [.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8,.8], temp: [18,22,30,33], light: [0.9,1,0.8,0.1], tide: 0, wave: null, moon: null },
+    { id: 'nilo', name: 'Persico del Nilo', hab: 'fresh', season: [.7,.7,.9,1,1,1,1,.9,.8,.8,.7,.7], temp: [22,24,30,32], light: [0.9,0.5,1,0.7], tide: 0, wave: null, moon: null },
+    { id: 'arapaima', name: 'Arapaima', hab: 'fresh', season: [.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6], temp: [24,26,31,34], light: [0.9,0.7,0.9,0.5], tide: 0, wave: null, moon: null },
+    { id: 'mahseer', name: 'Mahseer', hab: 'fresh', season: [.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6,.6], temp: [14,18,26,29], light: [1,0.6,0.9,0.4], tide: 0, wave: null, moon: null },
+    { id: 'smallmouth', name: 'Smallmouth bass', hab: 'fresh', season: [.2,.2,.4,.7,1,.9,.8,.8,.9,1,.7,.3], temp: [8,15,26,29], light: [0.9,0.8,0.9,0.3], tide: 0, wave: null, moon: null },
+    { id: 'grongo', name: 'Grongo', hab: 'sea', season: [.8,.8,.8,.8,.8,.7,.7,.7,.8,.9,1,.9], temp: [8,11,20,25], light: [0.2,0.1,0.7,1], tide: .4, wave: [0,0,1,2], moon: 'new' },
+    { id: 'cavedano', name: 'Cavedano', hab: 'fresh', season: [.6,.6,.7,.8,.8,.9,1,1,1,.9,.8,.7], temp: [1,7,25,29], light: [0.9,0.8,0.9,0.3], tide: 0, wave: null, moon: null },
+    { id: 'akame', name: 'Akame', hab: 'both', season: [.2,.2,.3,.5,.7,.9,1,1,1,.8,.5,.3], temp: [16,22,29,31], light: [0.8,0.2,0.9,1], tide: .8, wave: [0,0,.8,1.5], moon: 'new' },
+    { id: 'suzuki', name: 'Seabass giapponese (suzuki)', hab: 'both', season: [.4,.4,.6,.8,.8,.7,.7,.8,1,1,.9,.6], temp: [8,14,27,31], light: [0.9,0.3,1,0.9], tide: .9, wave: [0,.3,1.2,2], moon: null },
+    { id: 'traira', name: 'Traíra (tararira)', hab: 'fresh', season: [0.7,0.7,0.6,0.6,0.7,0.8,0.9,1,1,0.9,0.8,0.7], temp: [14,20,26,32], light: [0.8,0.5,0.9,1], tide: 0, wave: null, moon: null },
+    { id: 'codarossa', name: 'Pesce gatto codarossa (pirarara)', hab: 'fresh', season: [0.5,0.4,0.3,0.3,0.5,0.8,1,1,0.9,0.8,0.7,0.6], temp: [20,24,28,32], light: [0.7,0.4,0.9,1], tide: 0, wave: null, moon: null },
+    { id: 'cernia', name: 'Cernia bruna', hab: 'sea', season: [0.2,0.2,0.3,0.5,0.7,0.9,1,1,0.9,0.7,0.4,0.2], temp: [14,20,26,29], light: [0.9,0.6,1,0.2], tide: 0.3, wave: [0,0,1,2], moon: null },
+    { id: 'sanpietro', name: 'Pesce San Pietro', hab: 'sea', season: [0.4,0.4,0.6,0.8,1,0.9,0.7,0.6,0.8,0.9,0.6,0.4], temp: [10,14,20,24], light: [0.9,0.8,0.9,0.2], tide: 0.2, wave: [0,0,0.8,1.5], moon: null },
+    { id: 'palamita', name: 'Palamita', hab: 'sea', season: [0.3,0.3,0.5,0.8,0.9,0.7,0.5,0.6,0.9,1,0.9,0.5], temp: [12,16,22,26], light: [1,0.7,0.9,0.1], tide: 0.3, wave: [0,0.2,1.2,2], moon: null },
+    { id: 'barbo', name: 'Barbo', hab: 'fresh', season: [0.1,0.1,0.3,0.6,0.8,0.9,1,1,0.9,0.7,0.3,0.1], temp: [8,15,22,26], light: [0.9,0.5,1,0.8], tide: 0, wave: null, moon: null },
+    { id: 'tinca', name: 'Tinca', hab: 'fresh', season: [0,0,0.2,0.5,0.9,1,0.9,0.8,0.7,0.4,0.1,0], temp: [10,18,25,30], light: [1,0.4,0.9,0.6], tide: 0, wave: null, moon: null },
+    { id: 'persicosole', name: 'Persico sole', hab: 'fresh', season: [0,0.1,0.3,0.6,0.9,1,1,0.9,0.7,0.4,0.1,0], temp: [10,18,26,31], light: [0.8,1,0.8,0], tide: 0, wave: null, moon: null },
+    { id: 'spada', name: 'Pesce spada', hab: 'sea', season: [0.1,0.1,0.2,0.4,0.7,0.9,1,1,0.9,0.7,0.4,0.2], temp: [13,18,24,28], light: [0.9,0.6,0.9,1], tide: 0.1, wave: [0,0,1.5,2.5], moon: 'full' },
+    { id: 'merluzzo', name: 'Merluzzo', hab: 'sea', season: [1,0.9,0.7,0.4,0.3,0.2,0.2,0.3,0.5,0.8,1,1], temp: [0,2,10,15], light: [1,0.6,1,0.7], tide: 0.5, wave: [0,0.3,1.5,2.5], moon: null },
+    { id: 'carbonaro', name: 'Merluzzo carbonaro (pollack, saithe)', hab: 'sea', season: [0.2,0.2,0.4,0.7,0.9,1,1,1,0.9,0.7,0.4,0.2], temp: [2,6,13,18], light: [1,0.7,1,0.4], tide: 0.6, wave: [0,0.3,1.5,2.5], moon: null },
+    { id: 'halibut', name: 'Halibut atlantico', hab: 'sea', season: [0.2,0.2,0.4,0.6,0.8,0.9,1,1,1,0.9,0.5,0.2], temp: [1,4,10,14], light: [0.9,0.8,0.9,0.3], tide: 0.5, wave: [0,0,1.2,2], moon: null },
+    { id: 'salmerino', name: 'Salmerino', hab: 'fresh', season: [0.2,0.3,0.5,0.6,0.7,0.9,1,1,0.7,0.3,0.2,0.2], temp: [1,4,12,16], light: [1,0.7,1,0.1], tide: 0.2, wave: [0,0,1,2], moon: null },
+    { id: 'pescegatto', name: 'Pesce gatto americano (channel catfish)', hab: 'fresh', season: [0.1,0.1,0.3,0.6,0.9,1,1,1,0.8,0.5,0.2,0.1], temp: [10,21,29,33], light: [0.9,0.5,1,1], tide: 0, wave: null, moon: null },
+    { id: 'crappie', name: 'Crappie', hab: 'fresh', season: [0.4,0.4,0.7,1,1,0.7,0.5,0.5,0.7,0.9,0.7,0.4], temp: [5,14,23,30], light: [1,0.5,1,0.7], tide: 0, wave: null, moon: null },
+    { id: 'bluegill', name: 'Bluegill', hab: 'fresh', season: [0.2,0.2,0.4,0.7,1,1,0.9,0.8,0.7,0.5,0.3,0.2], temp: [5,18,27,34], light: [1,0.8,1,0.1], tide: 0, wave: null, moon: 'full' },
+    { id: 'cobia', name: 'Cobia', hab: 'sea', season: [0.2,0.3,0.5,0.8,1,0.9,0.8,0.8,0.7,0.5,0.3,0.2], temp: [18,23,29,32], light: [0.9,1,0.9,0.3], tide: 0.4, wave: [0,0,1,1.8], moon: null },
+    { id: 'marlin', name: 'Marlin azzurro', hab: 'sea', season: [0.2,0.2,0.3,0.5,0.7,0.9,1,1,0.9,0.6,0.3,0.2], temp: [22,26,30,32], light: [0.9,1,0.9,0.1], tide: 0.1, wave: [0,0.3,1.5,2.5], moon: null },
+    { id: 'roosterfish', name: 'Roosterfish (pesce gallo)', hab: 'sea', season: [0.3,0.3,0.4,0.6,0.8,1,1,0.9,0.9,0.7,0.5,0.3], temp: [21,24,29,31], light: [1,0.7,1,0.1], tide: 0.6, wave: [0,0.2,1,1.8], moon: null },
+    { id: 'surubi', name: 'Surubí (pintado, cachara)', hab: 'fresh', season: [0.4,0.4,0.3,0.3,0.5,0.7,0.9,1,1,0.8,0.6,0.5], temp: [18,22,28,31], light: [0.8,0.3,0.9,1], tide: 0, wave: null, moon: 'new' },
+    { id: 'tambaqui', name: 'Tambaqui (pacu)', hab: 'fresh', season: [0.7,0.8,0.9,1,1,0.9,0.8,0.7,0.6,0.5,0.6,0.7], temp: [22,25,29,32], light: [0.9,0.8,0.9,0.3], tide: 0, wave: null, moon: null },
+    { id: 'payara', name: 'Payara (pesce vampiro)', hab: 'fresh', season: [0.2,0.2,0.3,0.5,0.7,0.9,1,1,1,0.8,0.5,0.3], temp: [22,24,28,30], light: [1,0.8,0.9,0.2], tide: 0, wave: null, moon: null },
+    { id: 'cubera', name: 'Cubera snapper', hab: 'sea', season: [0.4,0.4,0.6,0.8,0.9,1,1,0.9,0.7,0.5,0.4,0.4], temp: [22,26,30,32], light: [0.9,0.4,1,1], tide: 0.5, wave: [0,0,1,1.8], moon: 'full' },
+    { id: 'kob', name: 'Kob (mulloway)', hab: 'both', season: [0.2,0.2,0.4,0.7,0.9,1,0.9,0.8,0.7,0.5,0.3,0.2], temp: [12,20,26,28], light: [0.9,0.4,1,0.8], tide: 0.7, wave: [0,0.4,1.5,2.5], moon: null },
+    { id: 'yellowfish', name: 'Yellowfish', hab: 'fresh', season: [0.9,0.8,0.6,0.3,0.2,0.1,0.1,0.2,0.5,0.8,1,1], temp: [10,18,24,27], light: [0.9,0.8,0.9,0.2], tide: 0, wave: null, moon: null },
+    { id: 'galjoen', name: 'Galjoen', hab: 'sea', season: [0.4,0.4,0.5,0.7,0.9,1,1,0.9,0.8,0.6,0.5,0.4], temp: [12,14,18,21], light: [0.8,1,0.8,0.1], tide: 0.6, wave: [0.3,0.8,2,3], moon: null },
+    { id: 'kurodai', name: 'Kurodai (orata nera giapponese)', hab: 'both', season: [0.2,0.2,0.4,0.8,1,1,0.9,0.8,0.7,0.6,0.4,0.2], temp: [12,18,25,28], light: [0.9,0.7,0.9,0.5], tide: 0.7, wave: [0,0,1,1.8], moon: null },
+    { id: 'aoriika', name: 'Calamaro di barriera (aori-ika)', hab: 'sea', season: [0.5,0.5,0.6,0.8,1,1,0.9,0.8,0.8,0.9,0.7,0.6], temp: [16,21,27,30], light: [0.8,0.4,0.9,1], tide: 0.4, wave: [0,0,0.6,1.2], moon: null },
+    { id: 'hiramasa', name: 'Ricciola australe (hiramasa, kingfish)', hab: 'sea', season: [0.2,0.2,0.4,0.7,0.9,1,1,0.9,0.8,0.6,0.3,0.2], temp: [14,18,24,26], light: [1,0.8,0.9,0.1], tide: 0.4, wave: [0,0.2,1.2,2], moon: null },
+    { id: 'mebaru', name: 'Mebaru', hab: 'sea', season: [0.4,0.3,0.5,0.8,1,0.9,0.7,0.6,0.7,0.9,0.8,0.5], temp: [10,14,20,24], light: [0.8,0.5,0.9,0.8], tide: 0.5, wave: [0,0,0.8,1.5], moon: null },
+    { id: 'snapperau', name: 'Snapper australiano', hab: 'sea', season: [0.7,0.6,0.4,0.3,0.3,0.4,0.5,0.7,0.9,1,1,0.9], temp: [12,16,21,26], light: [0.9,0.4,1,0.8], tide: 0.6, wave: [0,0,1.2,2], moon: null },
+    { id: 'flathead', name: 'Flathead', hab: 'both', season: [0.9,0.8,0.6,0.4,0.3,0.2,0.2,0.3,0.8,1,1,0.9], temp: [14,18,24,28], light: [0.9,0.8,1,0.5], tide: 0.8, wave: [0,0,0.6,1.2], moon: null },
+    { id: 'ausbass', name: 'Australian bass', hab: 'both', season: [0.7,0.6,0.5,0.3,0.2,0.2,0.2,0.4,0.8,1,1,0.9], temp: [10,18,24,28], light: [1,0.6,1,0.7], tide: 0.3, wave: [0,0,0.6,1.2], moon: null },
+    { id: 'goldenperch', name: 'Golden perch (yellowbelly)', hab: 'fresh', season: [0.8,0.7,0.5,0.3,0.2,0.1,0.2,0.4,0.8,1,1,0.9], temp: [12,18,25,30], light: [0.9,0.7,1,0.6], tide: 0, wave: null, moon: null },
+    { id: 'kahawai', name: 'Kahawai (Australian salmon)', hab: 'sea', season: [0.5,0.4,0.5,0.8,1,1,1,0.9,0.8,0.7,0.6,0.5], temp: [10,14,19,23], light: [1,0.9,1,0.2], tide: 0.5, wave: [0,0.2,1.2,2], moon: null },
+    { id: 'murraycod', name: 'Murray cod', hab: 'fresh', season: [.7,.7,.7,.7,.7,.7,.7,.7,.7,.7,.7,.7], temp: [10,16,26,30], light: [0.9,0.4,1,0.8], tide: 0, wave: null, moon: null }
   ];
 
   // Dove vive ogni specie nel mondo (nativa o introdotta stabilmente): riquadri [latMin, latMax, lonMin, lonMax].
@@ -699,6 +752,13 @@ var PescaEngine = (function () {
     tonno: [{ fn: ADRIATICO, s: [.25, .2, .25, .4, .55, .6, .7, .85, 1, 1, .8, .45] }, A(20, 65, -80, 42), A(20, 50, 120, 180), A(20, 50, -180, -110), A(-50, -30, 10, 180)],
     serra: [{ fn: ADRIATICO, s: [0, 0, 0, .1, .2, .4, .6, .8, 1, 1, .8, .2] }, A(25, 47, -82, -60), A(-40, -15, -60, -35), A(8, 46, -20, 42), A(-36, -15, 10, 35), A(-40, -22, 110, 155)]
   });
+  // Areali verificati (ricerca punto 1 e specie nuove, novembre 2026): vedi FONTI.md
+  Object.assign(RANGES, {"branzino":[[25,63,-25,42]],"orata":[[14,56,-18,36]],"leccia":[[-35,45,-18,36]],"alletterato":[[-35,45,-98,36]],"anguilla":[[36,68,-10,25],[31,46.5,-5.5,41],[10,53,-98,-52],[22,43,118,145],[-47,-27,140,178],[-35,5,25,60]],"trota":[[37,70,-10,40],[35,50,-115,-70],[-54,-38,-73,-65],[-47,-35,145,178],[34,62,-165,-115],[51,60,155,163],[-54,-15,-75,-65],[31,45,129,146],[27,36,72,92],[-34.5,-25,18,31]],"luccio":[[41.5,69,-5,45],[50,71,45,160],[40,69,-160,-65]],"persico":[[41,69,-5,45],[48,69,45,155],[-46,-33,138,177],[36,58,-115,-62]],"bass":[[25,48,-102,-72],[36.5,48,-9,18],[31,40,130,141],[-34.5,-23,18,32],[14,33,-118,-86],[19,24,-85,-74]],"carpa":[[36,60,-9,60],[22,48,100,144],[26,52,-124,-68],[-38,-25,138,152],[-34.5,-22,18,32],[-56,-20,-75,-40],[-47,-34,166,179]],"siluro":[[42,59,6,52],[40.5,48.5,-1.5,14]],"snakehead":[[24,49,105,135],[34,42,-93,-73],[-7,26,74,115],[25.2,27,-81,-80]],"peacock":[[-15,9,-76,-48],[-25,-16,-55,-42],[25.4,26.8,-80.6,-80],[8.8,9.4,-80.1,-79.5],[1.2,5.5,100.5,104],[17.5,18.7,-67.5,-65],[18,23,-161,-154]],"barramundi":[[-24,-10.5,121,152],[-10,22,92,148],[7,23,68,92]],"ayu":[[31,43,130,145],[23,41,118,130]],"gt":[[-28,28,32,76],[-25,31,95,175],[18.5,28.5,-178,-154]],"hucho":[[46.2,51,12.5,30],[44,46.2,13.6,30],[46,68,55,140]],"ricciola":[[30.5,45.8,-5.5,36],[-34,47,-28,18],[-25,43,-97,-35],[-28,38,34,179]],"dentice":[[30.5,45.8,-5.5,36],[14,43,-18.5,-6]],"sarago":[[30.5,45.8,-5.5,36],[-34,46,-28,18]],"lucioperca":[[43,64,10,55],[40.5,53,-2,14]],"temolo":[[44.5,69,-4,58],[45,71,60,180],[45,71,-168,-95]],"muskie":[[36,50,-96,-73]],"walleye":[[34,65,-125,-68]],"striper":[[29,49,-90,-64],[34,47,-125,-118],[30,41,-100,-76]],"redfish":[[21,41,-98,-71]],"permit":[[-24,38,-97,-35]],"nilo":[[-4,31,-16,38],[-3,2,31.5,34.8]],"smallmouth":[[34,49,-96,-71],[36,49,-124,-110],[-35,-30,18,24],[33,44,135,146]],"grongo":[[30.5,45.8,-5.5,36],[14,62,-28,10]],"cavedano":[[42,62,-4,50],[40,46.5,7,18]],"akame":[[31,34.5,131,137]],"suzuki":[[31,43,129.5,145],[25,41,118,130]],"murraycod":[[-37.5,-25,139,151.5,[1,1,0.9,0.8,0.6,0.5,0.5,0.6,0.7,0.8,0.9,0.9]]],"traira":[[-35,-25,-65,-50,[0.9,0.9,0.7,0.4,0.2,0.1,0.1,0.2,0.6,1,0.8,0.9]],[-35,11,-85,-35]],"codarossa":[[-15,8,-78,-50,[0.5,0.4,0.3,0.3,0.5,0.8,1,1,0.9,0.8,0.7,0.6]]],"cernia":[[30,45.8,-10,36],[-34.8,15,-18,32,[1,1,0.9,0.7,0.4,0.2,0.2,0.2,0.3,0.5,0.7,0.9]],[-38,-20,-58,-39,[1,1,0.9,0.7,0.4,0.2,0.2,0.2,0.3,0.5,0.7,0.9]],[-26.5,-23,32.5,47,[1,1,0.9,0.7,0.4,0.2,0.2,0.2,0.3,0.5,0.7,0.9]]],"sanpietro":[[-47,-15,112,179,[0.7,0.6,0.8,0.9,0.6,0.4,0.4,0.4,0.6,0.8,1,0.9]],[-35,62,-18,36],[10,42,105,145]],"palamita":[[30,47,-6,42],[-35,60,-18,20],[-42,45,-82,-35]],"barbo":[[41.5,55,-5,29],[42,46.5,7,15.5]],"tinca":[[36,62,-9,90],[35,50,-123,-70],[-46,-28,115,178],[-34.5,-25,18,31]],"persicosole":[[32,50,-100,-64],[37,54,-9,32]],"spada":[[30,45.5,-6,36],[-23,23,-180,180,[0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8]],[-45,50,-180,180]],"merluzzo":[[66,80,5,65,[0.8,1,1,0.9,0.6,0.5,0.6,0.6,0.7,0.7,0.7,0.8]],[35,62,-76,-45,[0.6,0.5,0.6,0.8,0.9,1,0.9,0.8,0.9,1,0.8,0.7]],[62,68,-44,-12],[45,80,-12,65]],"carbonaro":[[35,64,-76,-45],[44,81,-25,35]],"halibut":[[36,68,-77,-45],[62,68.5,-44,-12],[44,79,-12,55]],"salmerino":[[45.4,46.5,8.4,10.95,[.3,.3,.6,.9,1,.8,.6,.6,.8,.7,.3,.2]],[46,48.5,5.5,16,[0.3,0.3,0.6,0.9,1,0.8,0.6,0.6,0.8,0.7,0.3,0.2]],[41,55,-76,-52],[55,82,-180,180]],"pescegatto":[[25,55,-124,-67],[37,52,-8,26]],"crappie":[[25,50,-123,-68]],"bluegill":[[25,50,-124,-68],[31,41,130,141],[-34.5,-24,18,32,[0.9,0.8,0.7,0.5,0.3,0.2,0.2,0.2,0.4,0.7,1,1]]],"cobia":[[24,42,-98,-70],[-15,24,-98,-34,[0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8]],[-38,-15,-60,-34,[0.9,0.8,0.7,0.5,0.3,0.2,0.2,0.3,0.5,0.8,1,0.9]],[-35,35,-18,20],[-20,24,30,155,[0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8]],[-36,42,30,155]],"marlin":[[-15,15,-180,180,[0.7,0.8,0.9,0.9,0.8,0.7,0.7,0.7,0.8,0.9,0.9,0.8]],[-30,38,-98,-6],[-30,30,-20,15],[-35,35,32,180],[-35,35,-180,-75]],"roosterfish":[[18,33,-119,-100,[0.3,0.3,0.4,0.6,0.8,1,1,0.9,0.9,0.7,0.5,0.3]],[-18,18,-100,-70,[1,1,1,0.9,0.7,0.6,0.6,0.6,0.6,0.7,0.8,0.9]]],"surubi":[[-35,-10,-65,-40,[0.6,0.8,1,1,0.8,0.4,0.3,0.4,0.7,0.9,0.8,0.6]],[-25,9,-78,-50]],"tambaqui":[[2,10,-72,-60,[0.4,0.4,0.5,0.7,0.9,1,1,0.9,0.8,0.8,0.6,0.5]],[-18,10,-76,-48]],"payara":[[2,9,-75,-56,[1,1,1,0.8,0.4,0.2,0.2,0.3,0.4,0.6,0.8,0.9]],[-16,2,-76,-48]],"cubera":[[5,35,-98,-34],[-26,5,-60,-34,[0.9,0.8,0.6,0.5,0.4,0.4,0.5,0.6,0.7,0.8,0.9,1]]],"kob":[[-34.8,-25,18,36,[0.9,0.8,0.6,0.4,0.3,0.2,0.2,0.3,0.6,0.9,1,1]],[-35,-20,113,154,[0.9,0.8,0.6,0.4,0.3,0.2,0.2,0.3,0.6,0.9,1,1]],[15,25,65,75],[20,40,110,140]],"yellowfish":[[-31.5,-24,16.5,30,[0.9,0.8,0.6,0.3,0.2,0.1,0.1,0.2,0.5,0.8,1,1]]],"galjoen":[[-34.8,-18.5,14.5,32.5,[0.4,0.4,0.5,0.7,0.9,1,1,0.9,0.8,0.6,0.5,0.4]]],"kurodai":[[20,43,107,143]],"aoriika":[[31,37,28,36],[-35,40,32,170]],"hiramasa":[[30,45,125,146],[22,40,-125,-108],[-50,-15,-180,180,[1,1,0.9,0.7,0.4,0.2,0.2,0.3,0.6,0.9,1,1]]],"mebaru":[[30,45,125,146]],"snapperau":[[-39,-28,140,153,[0.7,0.6,0.4,0.3,0.3,0.4,0.5,0.7,0.9,1,1,0.9]],[-35,-23,113,118,[0.7,0.6,0.4,0.3,0.3,0.4,0.5,0.7,0.9,1,1,0.9]],[-47,-34,166,179,[1,1,0.9,0.6,0.4,0.3,0.3,0.3,0.4,0.6,0.8,1]]],"flathead":[[-38.5,-16,145,153.5,[0.9,0.8,0.6,0.4,0.3,0.2,0.2,0.3,0.8,1,1,0.9]]],"ausbass":[[-38.5,-25,149,153.5,[0.7,0.6,0.5,0.3,0.2,0.2,0.2,0.4,0.8,1,1,0.9]]],"goldenperch":[[-38,-26,141,151,[0.8,0.7,0.5,0.3,0.2,0.1,0.2,0.4,0.8,1,1,0.9]]],"kahawai":[[-44,-28,113,154,[0.5,0.4,0.5,0.8,1,1,1,0.9,0.8,0.7,0.6,0.5]],[-47,-34,166,179,[0.8,0.7,0.6,0.7,0.9,1,1,0.9,0.8,0.8,0.7,0.8]]]});
+  RANGES.tigre.push([-26, 12, 12, 36]);
+  RANGES.arapaima.push([-15, -10, -68, -64, [.3, .2, .2, .2, .3, .5, .7, .9, 1, 1, .9, .6]]);
+  RANGES.mahseer.unshift([24, 35, 70, 96, [.2, .5, .9, 1, .9, .4, .1, .1, .5, 1, .9, .4]], [9, 21, 73, 82, [1, 1, 1, .7, .5, .2, .1, .1, .2, .4, .7, .9]]);
+  RANGES.barracuda = [RANGES.barracuda[0], [14, 44.5, -28, 36], [-24, 40, -97, -35], [-28, 32, 32, 179]];
+  var DEPTH = {"branzino":[0.5,15,1,5],"orata":[2,30,5,12],"serra":[0,20,1,6],"sgombro":[10,100,20,50],"sugarello":[5,150,15,40],"leccia":[1,15,2,6],"alletterato":[10,100,15,30],"tonno":[15,200,25,50],"cefalo":[0.5,10,1,3],"seppia":[1,50,3,15],"calamaro":[15,200,20,60],"anguilla":[0.5,10,1,3],"ricciola":[10,150,20,50],"dentice":[10,200,25,60],"sarago":[1,50,3,15],"lampuga":[20,1000,0,0],"barracuda":[1,30,3,12],"grongo":[10,500,20,80],"gt":[1,50,3,15],"barramundi":[0,10,1,3],"striper":[0,30,1,6],"redfish":[0.5,5,1,2],"tarpon":[1,30,2,5],"bonefish":[0.3,3,0.5,1.5],"permit":[1,30,2,6],"snook":[0.5,10,1,3],"vela":[10,1000,0,0],"wahoo":[20,1000,0,0],"pinnagialla":[20,2500,0,50],"sgombroreale":[10,140,15,35],"suzuki":[1,20,1,5],"akame":[0.5,10,1,3],"cernia":[8,120,12,55],"sanpietro":[25,200,25,80],"palamita":[5,150,5,30],"spada":[100,1000,350,650],"merluzzo":[5,250,20,150],"carbonaro":[5,200,10,80],"halibut":[15,250,20,100],"cobia":[1,80,5,30],"marlin":[100,3000,200,1000],"roosterfish":[1,40,1,15],"cubera":[5,70,15,55],"kob":[1,30,2,15],"galjoen":[1,10,1,5],"kurodai":[1,25,2,10],"aoriika":[1,30,2,15],"hiramasa":[5,120,20,60],"mebaru":[1,30,2,10],"snapperau":[1,100,10,40],"flathead":[0.5,15,1,5],"kahawai":[0,30,1,10]};
   function rangeBox(spId, lat, lon) {
     var r = RANGES[spId]; if (!r) return null;
     for (var i = 0; i < r.length; i++) {
@@ -727,8 +787,9 @@ var PescaEngine = (function () {
     { id: 'bolognese', name: 'Bolognese / galleggiante', m: { snakehead: .4, peacock: .4, barramundi: .5, ayu: .8, alletterato: .3, tonno: .05, cefalo: 1, orata: .6, sugarello: .9, sgombro: .9, branzino: .6, serra: .3, leccia: .3, seppia: .2, calamaro: .2, anguilla: .4, trota: .8, luccio: .5, persico: .8, bass: .4, carpa: .9, siluro: .2 } },
     { id: 'fondo', name: 'Pesca a fondo', m: { snakehead: .3, barramundi: .5, hucho: .2, orata: .9, branzino: .7, anguilla: 1, cefalo: .5, serra: .2, sgombro: .2, sugarello: .2, leccia: .1, seppia: .1, trota: .4, luccio: .4, persico: .5, bass: .2, carpa: 1, siluro: 1 } },
     { id: 'eging', name: 'Eging (seppie/calamari)', m: { seppia: 1, calamaro: 1 } },
-    { id: 'traina', name: 'Traina costiera', m: { peacock: .6, barramundi: .9, gt: .8, hucho: .5, serra: 1, leccia: 1, alletterato: 1, tonno: .9, sgombro: .9, branzino: .8, sugarello: .7, orata: .05, calamaro: .1, trota: .6, luccio: .9, persico: .4, bass: .5, siluro: .5 } },
+    { id: 'traina', name: 'Traina', m: { peacock: .6, barramundi: .9, gt: .8, hucho: .5, serra: 1, leccia: 1, alletterato: 1, tonno: .9, sgombro: .9, branzino: .8, sugarello: .7, orata: .05, calamaro: .1, trota: .6, luccio: .9, persico: .4, bass: .5, siluro: .5 } },
     { id: 'drifting', name: 'Drifting (tonni)', m: { gt: .4, tonno: 1, alletterato: .7, serra: .5, leccia: .5, sgombro: .5, sugarello: .3, branzino: .15 } },
+    { id: 'jigging', name: 'Jigging (verticale, slow pitch)', m: {} },
     { id: 'mosca', name: 'Pesca a mosca', m: { snakehead: .4, peacock: .7, barramundi: .5, ayu: .7, gt: .3, hucho: .6, trota: 1, bass: .7, cefalo: .5, branzino: .5, luccio: .6, persico: .5, carpa: .3, sgombro: .4, sugarello: .3, serra: .2, leccia: .2 } }
   ];
 
@@ -742,6 +803,10 @@ var PescaEngine = (function () {
     mosca: { suzuki: .4, smallmouth: .8, cavedano: 1, lampuga: .3, barracuda: .3, temolo: 1, muskie: .3, salmone: 1, salmonepac: .7, striper: .6, redfish: .8, tarpon: 1, bonefish: 1, permit: .9, snook: .8, dorado: .8, tigre: .7, arapaima: .5, mahseer: .4 }
   };
   TYPES.forEach(function (t) { var x = EXTRA_M[t.id]; if (x) for (var k in x) t.m[k] = x[k]; });
+  // Tabella completa specie x tecnica (ricerca punto 6 + specie nuove). Colonne: spinning, surfcasting, bolognese, fondo, eging, traina, drifting, jigging, mosca
+  var TECH = {"branzino":[0.9,0.7,0.8,0.6,0,0.2,0,0.1,0.8],"orata":[0,1,0.6,0.9,0,0,0,0.1,0],"serra":[1,0.8,0.4,0.6,0,0.6,0,0.1,0.5],"sgombro":[0.6,0.1,0.5,0.3,0,0.5,0.3,0.7,0.3],"sugarello":[0.6,0.1,0.6,0.3,0,0.4,0.3,0.7,0.4],"leccia":[0.9,0.4,0.3,0.5,0,0.8,0,0.1,0.8],"alletterato":[0.8,0,0,0,0,0.9,0.5,0.6,0.4],"tonno":[0.7,0,0,0,0,0.9,1,0.5,0.3],"cefalo":[0,0.6,1,0.7,0,0,0,0,0.2],"seppia":[0,0.3,0.1,0.5,1,0.3,0,0.1,0],"calamaro":[0,0.1,0,0.2,1,0.4,0,0.3,0],"anguilla":[0,0.1,0.7,1,0,0,0,0,0.1],"trota":[0.9,0,0.7,0.2,0,0.1,0,0.2,1],"luccio":[1,0,0.1,0.3,0,0.5,0,0.1,0.6],"persico":[0.9,0,0.7,0.5,0,0.2,0,0.6,0.5],"bass":[1,0,0.2,0.3,0,0.1,0,0.1,0.9],"carpa":[0,0.1,0.9,1,0,0,0,0,0.2],"siluro":[0.7,0,0.1,0.9,0,0.4,0,0.8,0.1],"snakehead":[1,0,0,0.2,0,0.2,0,0,0.6],"peacock":[1,0,0,0.1,0,0.3,0,0.1,0.9],"barramundi":[1,0,0.3,0.4,0,0.5,0,0.2,0.8],"ayu":[0.1,0,0.8,0,0,0,0,0,0.7],"gt":[1,0,0,0.1,0,0.5,0.2,0.8,0.5],"hucho":[0.8,0,0,0.1,0,0.3,0,0.1,0.8],"ricciola":[0.6,0,0,0.3,0,0.9,0.5,1,0.2],"dentice":[0.3,0,0,0.8,0,0.8,0.3,1,0.1],"sarago":[0.1,1,0.9,1,0,0,0,0.1,0.1],"lampuga":[0.9,0,0,0,0,1,0.3,0.4,0.6],"barracuda":[1,0.2,0.2,0.4,0,0.8,0,0.3,0.5],"lucioperca":[0.8,0,0.3,0.8,0,0.4,0,0.7,0.3],"temolo":[0.2,0,0.4,0.1,0,0,0,0,1],"muskie":[1,0,0,0.1,0,0.8,0,0.1,0.6],"walleye":[0.6,0,0.2,0.8,0,0.6,0,0.7,0.2],"salmone":[0.9,0,0.1,0.1,0,0.2,0,0.1,1],"salmonepac":[0.8,0.1,0.1,0.2,0,0.8,0,0.5,0.8],"striper":[1,0.8,0.4,0.7,0,0.6,0,0.3,0.9],"redfish":[0.8,0.9,0.4,0.9,0,0.2,0,0.1,0.8],"tarpon":[0.8,0.1,0,0.3,0,0.4,0,0.1,1],"bonefish":[0.2,0,0,0.5,0,0,0,0,1],"permit":[0.1,0,0,0.5,0,0,0,0,1],"snook":[1,0.3,0.3,0.5,0,0.3,0,0.1,0.9],"vela":[0.2,0,0,0,0,1,0.4,0.1,0.5],"wahoo":[0.3,0,0,0,0,1,0.3,0.5,0.1],"pinnagialla":[0.7,0,0,0,0,0.9,0.8,0.8,0.4],"sgombroreale":[0.6,0.3,0,0.5,0,1,0.4,0.4,0.3],"dorado":[1,0,0.1,0.4,0,0.5,0,0.1,0.9],"tigre":[0.8,0,0,0.3,0,0.4,0,0.1,0.8],"nilo":[0.8,0,0,0.5,0,0.9,0,0.6,0.4],"arapaima":[0.5,0,0,0.7,0,0.3,0,0.1,0.4],"mahseer":[0.9,0,0.3,0.8,0,0.1,0,0,0.9],"smallmouth":[1,0,0.2,0.4,0,0.2,0,0.3,0.9],"grongo":[0,0.3,0.1,1,0,0.1,0,0.1,0],"cavedano":[0.8,0,1,0.7,0,0.1,0,0,0.9],"akame":[0.9,0,0,0.3,0,0.3,0,0.1,0.7],"suzuki":[1,0.5,0.7,0.4,0,0.3,0,0.2,0.8],"murraycod":[0.9,0,0.1,0.7,0,0.6,0,0.2,0.5],"traira":[1,0,0.6,0.8,0,0.4,0,0,0.9],"codarossa":[0.1,0,0,1,0,0.2,0,0,0.05],"cernia":[0.2,0,0,0.7,0,0.9,0.3,1,0],"sanpietro":[0,0,0,0.9,0,0.2,0.3,1,0],"palamita":[1,0,0.2,0,0,1,0.8,0.8,0.6],"barbo":[0.3,0,0.9,1,0,0,0,0,0.6],"tinca":[0,0,1,0.9,0,0,0,0,0.1],"persicosole":[0.5,0,1,0.3,0,0,0,0,0.7],"spada":[0,0,0,0,0,0.5,1,0.2,0],"merluzzo":[0.2,0.7,0,0.9,0,0.1,0.5,1,0.1],"carbonaro":[0.9,0.3,0.2,0.4,0,0.6,0.5,1,0.7],"halibut":[0.1,0,0,0.6,0,0.5,0.9,1,0],"salmerino":[1,0,0.5,0.5,0,0.9,0.2,0.6,0.9],"pescegatto":[0.3,0,0.7,1,0,0,0.3,0.1,0.1],"crappie":[1,0,1,0.2,0,0.7,0.6,0.8,0.7],"bluegill":[0.6,0,1,0.4,0,0,0,0.5,0.9],"cobia":[1,0.2,0,0.6,0,0.7,0.9,0.8,0.6],"marlin":[0.1,0,0,0,0,1,0.4,0.1,0.2],"roosterfish":[1,0.5,0,0.2,0,0.9,0.6,0.3,0.8],"surubi":[0.7,0,0,1,0,0.9,0.9,0.2,0.1],"tambaqui":[0.2,0,0.9,1,0,0,0.4,0,0.7],"payara":[1,0,0,0.5,0,0.6,0.5,0.7,0.8],"cubera":[0.6,0,0,1,0,0.4,0.7,0.8,0.2],"kob":[0.7,1,0.4,0.9,0,0.2,0.1,0.3,0.4],"yellowfish":[0.6,0,0.5,0.8,0,0,0,0,1],"galjoen":[0.1,1,0.7,0.8,0,0,0,0,0.2],"kurodai":[0.3,0.8,1,0.9,0,0,0,0.1,0.4],"aoriika":[0,0,0,0,1,0.1,0,0.2,0],"hiramasa":[0.9,0,0.1,0.4,0,0.9,0.7,1,0.5],"mebaru":[1,0,0.8,0.5,0,0,0,0.3,0.6],"snapperau":[0.3,0.4,0.2,1,0,0.4,1,0.9,0.1],"flathead":[1,0.5,0.3,0.9,0,0.5,0.3,0.4,0.7],"ausbass":[1,0,0.4,0.5,0,0.4,0.1,0.2,0.9],"goldenperch":[0.9,0,0.6,1,0,0.7,0.2,0.5,0.4],"kahawai":[1,0.9,0.4,0.6,0,0.7,0.2,0.6,0.9]};
+  var TECH_COLS = ['spinning', 'surfcasting', 'bolognese', 'fondo', 'eging', 'traina', 'drifting', 'jigging', 'mosca'];
+  TYPES.forEach(function (t) { var c = TECH_COLS.indexOf(t.id); if (c < 0) return; for (var sp in TECH) t.m[sp] = TECH[sp][c]; });
 
   // Climatologia di riserva (oltre i 16 giorni di previsione)
   var CLIM_AIR = [4, 5, 9, 13, 18, 22, 25, 24, 20, 15, 10, 5];
@@ -762,7 +827,17 @@ var PescaEngine = (function () {
   }
 
   // ---------- Caricamento dati ----------
+  function parseCoords(q) {
+    var m = String(q).trim().replace(/°/g, '').match(/^(-?\d{1,2}(?:[.,]\d+)?)\s*([NS])?\s*[,;\s]\s*(-?\d{1,3}(?:[.,]\d+)?)\s*([EOW])?$/i);
+    if (!m) return null;
+    var la = parseFloat(m[1].replace(',', '.')), lo = parseFloat(m[3].replace(',', '.'));
+    if (m[2] && /s/i.test(m[2])) la = -Math.abs(la);
+    if (m[4] && /[ow]/i.test(m[4])) lo = -Math.abs(lo);
+    if (Math.abs(la) > 90 || Math.abs(lo) > 180) return null;
+    return { name: la.toFixed(4) + ', ' + lo.toFixed(4), lat: la, lon: lo, detail: 'coordinate esatte', broad: null };
+  }
   async function geocode(getJSON, name) {
+    var pc = parseCoords(name); if (pc) return [pc];
     var j = await getJSON('https://geocoding-api.open-meteo.com/v1/search?count=8&language=it&name=' + encodeURIComponent(name));
     // prima i posti italiani, poi il resto (ordine originale mantenuto a parità)
     return (j.results || []).map(function (r, i) {
@@ -800,6 +875,14 @@ var PescaEngine = (function () {
       var cnt = d.sea.filter(function (x) { return x != null; }).length + d.sst.filter(function (x) { return x != null; }).length;
       d.marine = cnt > 48;
       d.tide = fitTide(d);
+    }
+    if (d.marine) {
+      try {
+        var la0 = [], lo0 = [];
+        [1.5, 3, 5].forEach(function (r) { for (var b = 0; b < 360; b += 30) { var rad = b * Math.PI / 180; la0.push((lat + r / 111 * Math.cos(rad)).toFixed(4)); lo0.push((lon + r / (111 * Math.cos(lat * Math.PI / 180)) * Math.sin(rad)).toFixed(4)); } });
+        var ej = await getJSON('https://api.open-meteo.com/v1/elevation?latitude=' + la0.join(',') + '&longitude=' + lo0.join(','));
+        if (ej && ej.elevation) { d.coastZeros = ej.elevation.filter(function (x) { return x === 0; }).length; if (d.coastZeros < 4) d.marine = false; }
+      } catch (err) {}
     }
     // ultimo indice con meteo valido
     d.lastIdx = n - 1;
@@ -1034,8 +1117,8 @@ var PescaEngine = (function () {
   var SPOT = 'shore';
   function setSpot(s) { SPOT = s === 'boat' ? 'boat' : 'shore'; }
   // da riva: quanto è realistico prendere la specie (Alto Adriatico, fondali bassi)
-  var SHORE = { tonno: 0.02, alletterato: 0.45, leccia: 0.8, calamaro: 0.8, ricciola: .3, dentice: .2, lampuga: .05, vela: .01, wahoo: .01, pinnagialla: .02, sgombroreale: .3, barracuda: .7, gt: .6 };
-  var BOAT = { tonno: 1, alletterato: 1, leccia: 1, serra: 1, sgombro: 1, ricciola: 1, dentice: 1, lampuga: 1, vela: 1, wahoo: 1, pinnagialla: 1, sgombroreale: 1 };
+  var SHORE = { cernia: 0.2, sanpietro: 0.05, spada: 0.01, marlin: 0.01, halibut: 0.1, cobia: 0.3, cubera: 0.3, hiramasa: 0.2, palamita: 0.4, merluzzo: 0.4, carbonaro: 0.6, snapperau: 0.5, roosterfish: 0.6, tonno: 0.02, alletterato: 0.45, leccia: 0.8, calamaro: 0.8, ricciola: .3, dentice: .2, lampuga: .05, vela: .01, wahoo: .01, pinnagialla: .02, sgombroreale: .3, barracuda: .7, gt: .6 };
+  var BOAT = { cernia: 1, sanpietro: 1, spada: 1, marlin: 1, halibut: 1, hiramasa: 1, palamita: 1, cobia: 1, tonno: 1, alletterato: 1, leccia: 1, serra: 1, sgombro: 1, ricciola: 1, dentice: 1, lampuga: 1, vela: 1, wahoo: 1, pinnagialla: 1, sgombroreale: 1 };
 
   // Presenza locale: quanto la specie frequenta davvero la zona (1 = normale)
   // p = presenza (0 assente, 0.15 rara, 0.5 ogni tanto, 1 normale, 1.3 abbondante)
@@ -1044,13 +1127,13 @@ var PescaEngine = (function () {
   var SHALLOW = { alletterato: 0.05, ricciola: 0.02, dentice: 0.02, lampuga: 0.01 };
   var ZONES = [
     { name: 'Golfo di Trieste', test: function (la, lo) { return la >= 45.55 && lo >= 13.45 && lo < 14.2; },
-      p: { tonno: 0.5, alletterato: 0.05, leccia: 0.5, ricciola: 0.15, lampuga: 0.15, dentice: 0.5, serra: 0.5, barracuda: 0.15 }, shore: SHALLOW },
+      p: { tonno: 0.5, alletterato: 0.05, leccia: 0.5, ricciola: 0.15, lampuga: 0.15, dentice: 0.5, serra: 0.5, barracuda: 0.15, cernia: 0.5, spada: 0 }, shore: SHALLOW },
     { name: 'Alto Adriatico orientale', test: function (la, lo) { return la >= 45.35 && lo >= 12.55 && lo < 14.2; },
-      p: { tonno: 0.15, alletterato: 0.05, leccia: 0.5, ricciola: 0.15, lampuga: 0.15, dentice: 0.15, serra: 0.5, barracuda: 0.15 }, shore: SHALLOW },
+      p: { tonno: 0.15, alletterato: 0.05, leccia: 0.5, ricciola: 0.15, lampuga: 0.15, dentice: 0.15, serra: 0.5, barracuda: 0.15, cernia: 0.15, spada: 0 }, shore: SHALLOW },
     { name: 'Laguna veneta e Chioggia', test: function (la, lo) { return la >= 44.8 && la < 45.7 && lo >= 11.9 && lo < 12.55; },
-      p: { tonno: 1, alletterato: 0.5, leccia: 1, ricciola: 0.15, lampuga: 0.15, dentice: 0.15, barracuda: 0.15 }, shore: SHALLOW },
+      p: { tonno: 1, alletterato: 0.5, leccia: 1, ricciola: 0.15, lampuga: 0.15, dentice: 0.15, barracuda: 0.15, cernia: 0.15, spada: 0 }, shore: SHALLOW },
     { name: 'Romagna e Marche', test: function (la, lo) { return la >= 43.0 && la < 44.8 && lo >= 12.0 && lo < 14.2; },
-      p: { tonno: 1, alletterato: 0.5, ricciola: 0.5, lampuga: 0.5, dentice: 0.15, barracuda: 0.15 }, shore: SHALLOW },
+      p: { tonno: 1, alletterato: 0.5, ricciola: 0.5, lampuga: 0.5, dentice: 0.15, barracuda: 0.15, cernia: 0.15, spada: 0.15 }, shore: SHALLOW },
     { name: 'Abruzzo, Molise e Puglia adriatica', test: function (la, lo) { return la < 43 && ADRIATICO(la, lo) && lo < 19; },
       p: { barracuda: 0.5 } },
     { name: 'Sicilia', test: function (la, lo) { return la >= 36.5 && la < 38.4 && lo >= 12.2 && lo < 15.7; }, p: { lampuga: 1.3 } },
@@ -1086,6 +1169,7 @@ var PescaEngine = (function () {
     // riva o barca
     if (SPOT === 'shore') {
       if (ty.id === 'traina' || ty.id === 'drifting') { mult *= 0.05; why.push(['-', 'Questa tecnica si fa in barca']); }
+      else if (ty.id === 'jigging' && env === 'sea') { mult *= 0.3; why.push(['-', 'Da riva il jigging si fa solo da scogliere con fondale profondo']); }
       else {
         var zz = zoneOf(d.lat, d.lon).z, shF = zz && zz.shore && zz.shore[sp.id] != null ? zz.shore[sp.id] : SHORE[sp.id];
         if (shF != null) { mult *= shF; if (shF < 0.5) why.push(['-', zz && zz.shore && zz.shore[sp.id] != null ? 'Qui il fondale è basso: da riva quasi impossibile, serve la barca' : 'Da riva è raro: meglio in barca']); }
@@ -1240,7 +1324,7 @@ var PescaEngine = (function () {
     dayCurve: dayCurve, bestWindow: bestWindow, tideExtremes: tideExtremes, seaLevel: seaLevel,
     local: local, localMidnight: localMidnight, moon: moon, envOf: envOf, windName: windName, windSide: windSide, skyName: skyName, verdict: verdict,
     byId: byId, PERIOD_NAMES: PERIOD_NAMES, setSpot: setSpot,
-    setPresence: setPresence, zoneOf: zoneOf, presenceInfo: presenceInfo, PRES_LEVELS: PRES_LEVELS, inRange: inRange, loadClimate: loadClimate, seasonAt: seasonAt
+    setPresence: setPresence, zoneOf: zoneOf, presenceInfo: presenceInfo, PRES_LEVELS: PRES_LEVELS, inRange: inRange, loadClimate: loadClimate, seasonAt: seasonAt, DEPTH: DEPTH
   };
 })();
 
@@ -1248,7 +1332,7 @@ var PescaEngine = (function () {
 <script>
 (function () {
   'use strict';
-  var APP_NAME = 'Pescomante', APP_VERSION = '20', APP_DATE = '2026-11-16';
+  var APP_NAME = 'Pescomante', APP_VERSION = '25', APP_DATE = '2026-11-16';
   var E = PescaEngine, H = E.H, D = E.D;
   var $ = function (id) { return document.getElementById(id); };
   var GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
@@ -1282,7 +1366,7 @@ var PescaEngine = (function () {
   // chi aveva già impostato l'app prima di questa versione non rivede il benvenuto
   if (!S.setup && (S.queen || (Array.isArray(S.favs) && S.favs.some(Boolean)))) S.setup = true;
   function validSp(id) { return E.SPECIES.some(function (x) { return x.id === id; }); }
-  if (!validSp(S.target)) S.target = 'branzino';
+  if (S.target !== 'auto' && !validSp(S.target)) S.target = 'branzino';
   if (!Array.isArray(S.favs)) S.favs = cloneFavs();
   S.favs = S.favs.slice(0, 4); while (S.favs.length < 4) S.favs.push(null);
   S.favs.forEach(function (f) { if (f) { if (!f.spot) f.spot = 'shore'; if (f.fish && !validSp(f.fish)) f.fish = null; } });
@@ -1330,6 +1414,7 @@ var PescaEngine = (function () {
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 
   // ---------- popolamento select ----------
+  $('type').add(new Option('\u2605 La tecnica migliore', 'auto'));
   E.TYPES.forEach(function (t) { $('type').add(new Option(t.name, t.id)); });
   // pesci presenti qui in alto; gli altri in un gruppo a parte
   // ordine alfabetico italiano
@@ -1339,6 +1424,7 @@ var PescaEngine = (function () {
     E.SPECIES.forEach(function (s) { var pi = E.presenceInfo(S.place.lat, S.place.lon, s.id); (pi.v > 0 || pi.user ? yes : no).push(s); });
     yes.sort(byName); no.sort(byName);
     sel.innerHTML = '';
+    sel.add(new Option('\u2605 Il pesce più probabile', 'auto'));
     yes.forEach(function (s) { sel.add(new Option(s.name, s.id)); });
     if (no.length) { var g = document.createElement('optgroup'); g.label = 'Non vivono qui'; no.forEach(function (s) { g.appendChild(new Option(s.name, s.id)); }); sel.appendChild(g); }
     sel.value = S.target;
@@ -1346,6 +1432,29 @@ var PescaEngine = (function () {
   fillTargets();
   MESI.forEach(function (m, i) { $('calMonth').add(new Option(m.charAt(0).toUpperCase() + m.slice(1), i)); });
   $('type').value = S.type; $('target').value = S.target; $('env').value = S.env; $('spot').value = S.spot; $('place').value = S.place.name;
+
+  // pesce e tecnica in uso: se l'utente ha scelto "automatico", li sceglie l'app per quel momento
+  var CT = S.target, CY = S.type;
+  function resolveAuto(t) {
+    CT = S.target; CY = S.type;
+    if (!data || (CT !== 'auto' && CY !== 'auto')) { if (CT === 'auto') CT = 'branzino'; if (CY === 'auto') CY = 'spinning'; return; }
+    if (CT === 'auto' && CY === 'auto') { var b = E.bestAt(data, t, S.env, null); CT = b.id; CY = b.typeId; }
+    else if (CT === 'auto') { var c = E.conditions(data, t), best = null; E.SPECIES.forEach(function (s) { var r = E.score(data, c, s.id, CY, S.env); if (!best || r.pct > best.pct) best = r; }); CT = best.id; }
+    else { CY = E.bestAt(data, t, S.env, CT).typeId; }
+    // nei menu "automatico" mostra anche cosa ha scelto
+    var ot = $('target').querySelector('option[value=auto]'), oy = $('type').querySelector('option[value=auto]');
+    if (ot) ot.textContent = '\u2605 Il pesce più probabile' + (S.target === 'auto' ? ' (' + sp(CT).name + ')' : '');
+    if (oy) oy.textContent = '\u2605 La tecnica migliore' + (S.type === 'auto' ? ' (' + E.byId(E.TYPES, CY).name + ')' : '');
+  }
+  // tecniche secondo l'ambiente: in acqua dolce niente surfcasting, eging e drifting; la traina diventa "in lago o fiume"
+  function fixTypes() {
+    if (!data) return;
+    var fresh = E.envOf(data, S.env) === 'fresh';
+    [].forEach.call($('type').options, function (o) {
+      if (o.value === 'traina') o.textContent = fresh ? 'Traina in lago o fiume' : 'Traina in mare';
+      if (/^(surfcasting|eging|drifting)$/.test(o.value)) o.hidden = fresh;
+    });
+  }
 
   // ---------- caricamento ----------
   var favData = {};
@@ -1383,7 +1492,7 @@ var PescaEngine = (function () {
         if (bb) { S.target = bb.id; S.type = bb.typeId; $('type').value = S.type; }
         delete S.needTarget; save();
       }
-      fillTargets();
+      fillTargets(); fixTypes();
       if (G.tLat !== S.place.lat || G.tLon !== S.place.lon) globeTo(S.place.lat, S.place.lon);
       loadFavs();
       calCache = {};
@@ -1544,7 +1653,7 @@ var PescaEngine = (function () {
     var pl = E.pressLabel(c.press), pcol = pl === 'ALTA' ? T.acc : pl === 'BASSA' ? COLORS.INUTILE : T.muted;
     var trend = c.dp3 == null ? '' : c.dp3 < -0.6 ? ' in calo' : c.dp3 > 0.6 ? ' in aumento' : ' stabile';
     var tiles = [
-      { t: 'Marea', v: c.sea != null ? sgn(c.sea) + ' m' : '–', sub: c.rate == null ? '' : (c.rate > 0.01 ? '↗ crescente' : c.rate < -0.01 ? '↘ calante' : '→ stanca'), a: s.sea, col: T.acc, hide: env !== 'sea' },
+      { t: 'Marea', v: c.sea != null ? sgn(c.sea) + ' m' : '–', sub: c.rate == null ? '' : (c.rate > 0.01 ? '\u2197\uFE0E crescente' : c.rate < -0.01 ? '\u2198\uFE0E calante' : '\u2192\uFE0E stanca'), a: s.sea, col: T.acc, hide: env !== 'sea' },
       { t: 'Vento', v: c.wind == null ? 'n.d.' : Math.round(c.wind) + ' km/h', sub: c.wind == null ? '' : 'da ' + E.windName(c.wdir) + (c.wside ? ' (' + WSIDE[c.wside] + ')' : '') + ' · raffiche ' + Math.round(c.gust), a: s.wind, a2: s.gust, col: T.acc, col2: T.t2 },
       { t: 'Temperatura', v: c.temp == null ? '–' : fx(c.temp, 1) + '°', sub: 'aria' + (env === 'sea' ? ' · acqua ' + fx(c.sst, 1) + '°' : ' · acqua ~' + fx(c.freshT, 0) + '°'), a: s.temp, a2: env === 'sea' ? s.sst : null, col: COLORS.SCARSO, col2: '#4a8fd0' },
       { t: 'Pressione', v: c.press == null ? 'n.d.' : Math.round(c.press) + ' hPa', sub: '<span class="badge" style="background:' + pcol + '">' + pl + '</span>' + trend, a: s.press, col: COLORS.BUONO },
@@ -1561,9 +1670,10 @@ var PescaEngine = (function () {
   function render() {
     if (!data) return;
     var env = E.envOf(data, S.env), c = E.conditions(data, sel);
-    var all = E.scoreAll(data, sel, S.type, S.env);
-    var me = E.score(data, c, S.target, S.type, S.env);
-    var ty = E.byId(E.TYPES, S.type);
+    resolveAuto(sel);
+    var all = E.scoreAll(data, sel, CY, S.env);
+    var me = E.score(data, c, CT, CY, S.env);
+    var ty = E.byId(E.TYPES, CY);
 
     $('stPlace').textContent = S.place.name + ' (' + S.place.lat.toFixed(2) + '°N ' + S.place.lon.toFixed(2) + '°E) · ' + (env === 'sea' ? 'mare' : 'acqua dolce') + ' · ' + (S.spot === 'boat' ? 'in barca' : 'da riva');
     $('stSrc').textContent = c.forecast ? 'Previsione' : 'Stima';
@@ -1576,7 +1686,7 @@ var PescaEngine = (function () {
     $('vLabel').style.color = COLORS[me.label];
     $('vBar').style.width = me.pct + '%';
     var mid = E.localMidnight(data, sel);
-    var curve = E.dayCurve(data, mid, S.target, S.type, S.env), best = E.bestWindow(curve);
+    var curve = E.dayCurve(data, mid, CT, CY, S.env), best = E.bestWindow(curve);
     $('vWhen').innerHTML = dayLong(sel) + ', ore ' + hhmm(sel) + (c.forecast ? '' : ' <span class="tag">stima</span>') +
       '<br>' + (best.pct < 15 ? 'Oggi nessuna fascia oraria buona per questa specie.' : 'Migliore della giornata: <b>' + pad(best.from) + ':00–' + pad(best.to % 24) + ':00</b> (' + best.pct + '%)');
     if (broadNote) $('vWhen').insertAdjacentHTML('afterbegin', '<span class="tag">' + esc(broadNote) + '</span><br>');
@@ -1586,8 +1696,8 @@ var PescaEngine = (function () {
 
     var envHere = E.envOf(data, S.env);
     var here = function (id) { var x = sp(id); if (x.hab !== 'both' && x.hab !== envHere) return false; var pi = E.presenceInfo(S.place.lat, S.place.lon, id); return pi.v > 0 || pi.user; };
-    $('spList').innerHTML = all.filter(function (r) { return here(r.id) || r.id === S.target; }).map(function (r) {
-      return '<tr data-id="' + r.id + '"' + (r.id === S.target ? ' class="sel"' : '') + '><td>' + r.name + '</td><td class="bar"><div class="prog sm"><i style="width:' + r.pct + '%"></i></div></td><td class="n"><b class="vl" style="color:' + COLORS[r.label] + '">' + r.pct + '</b></td></tr>';
+    $('spList').innerHTML = all.filter(function (r) { return here(r.id) || r.id === CT; }).map(function (r) {
+      return '<tr data-id="' + r.id + '"' + (r.id === CT ? ' class="sel"' : '') + '><td>' + r.name + '</td><td class="bar"><div class="prog sm"><i style="width:' + r.pct + '%"></i></div></td><td class="n"><b class="vl" style="color:' + COLORS[r.label] + '">' + r.pct + '</b></td></tr>';
     }).join('');
 
     var sun = c.sunrise ? hhmm(c.sunrise) + ' / ' + hhmm(c.sunset) : '–';
@@ -1600,13 +1710,13 @@ var PescaEngine = (function () {
 
     var l = L(sel);
     $('timeTxt').value = pad(l.getUTCHours()) + ':' + pad(l.getUTCMinutes()) + (live ? ' (ora)' : '');
-    $('slider').value = l.getUTCHours() * 2 + (l.getUTCMinutes() >= 30 ? 1 : 0);
+    $('slider').value = $('slider2').value = l.getUTCHours() * 2 + (l.getUTCMinutes() >= 30 ? 1 : 0);
     $('stDate').textContent = dayLong(sel) + (live ? ' · in tempo reale' : '');
     $('nowBtn').classList.toggle('on', live);
     renderCal();
     drawClock();
 
-    $('dayTitle').textContent = 'Andamento della giornata — ' + sp(S.target).name;
+    $('dayTitle').textContent = 'Andamento della giornata — ' + sp(CT).name;
     $('dayBest').innerHTML = best.pct < 15 ? dayShort(sel) + ': nessuna fascia buona. Prova un’altra tecnica, la barca o un altro giorno.' : dayShort(sel) + ': picco <b>' + best.pct + '%</b> tra le ' + pad(best.from) + ':00 e le ' + pad(best.to % 24) + ':00. Tocca una barra per scegliere l&rsquo;ora.';
     drawDay(curve);
     drawTide(mid, env);
@@ -1689,8 +1799,8 @@ var PescaEngine = (function () {
 
   // ---------- calendario ----------
   function dayScore(y, m, d) {
-    var k = S.target + S.type + S.env + S.spot + JSON.stringify(S.pres[E.zoneOf(S.place.lat, S.place.lon).key] || {}) + y + '-' + m + '-' + d;
-    if (calCache[k] == null) calCache[k] = Math.max.apply(null, E.dayCurve(data, midnightOf(y, m, d), S.target, S.type, S.env));
+    var k = CT + CY + S.env + S.spot + JSON.stringify(S.pres[E.zoneOf(S.place.lat, S.place.lon).key] || {}) + y + '-' + m + '-' + d;
+    if (calCache[k] == null) calCache[k] = Math.max.apply(null, E.dayCurve(data, midnightOf(y, m, d), CT, CY, S.env));
     return calCache[k];
   }
   function renderCal() {
@@ -1838,7 +1948,7 @@ var PescaEngine = (function () {
 
   $('type').onchange = function () { S.type = this.value; save(); render(); };
   $('target').onchange = function () { S.target = this.value; save(); render(); };
-  $('env').onchange = function () { S.env = this.value; save(); render(); };
+  $('env').onchange = function () { S.env = this.value; save(); fixTypes(); render(); };
   $('spot').onchange = function () { S.spot = this.value; E.setSpot(S.spot); save(); render(); };
   $('spList').onclick = function (e) { var tr = e.target.closest('tr'); if (!tr) return; S.target = tr.dataset.id; $('target').value = S.target; save(); render(); };
 
@@ -1890,7 +2000,7 @@ var PescaEngine = (function () {
   function setFavPlace(k, p) {
     var old = favByKey(k);
     var nf = { name: p.name, lat: p.lat, lon: p.lon, env: old ? old.env : 'sea', spot: old ? (old.spot || 'shore') : 'shore', fish: old ? old.fish : null };
-    if (k === 'q') { nf.fish = nf.fish || S.target; S.queen = nf; } else S.favs[+k] = nf;
+    if (k === 'q') { nf.fish = nf.fish || CT; S.queen = nf; } else S.favs[+k] = nf;
     save(); renderFavEditor(); loadFavs(); renderFavs();
     // mare o acqua dolce: lo capisco dai dati del posto (se c'è il mare, ci sono i dati marini)
     E.loadData(getJSON, nf.lat, nf.lon).then(function (d) {
@@ -1931,7 +2041,7 @@ var PescaEngine = (function () {
     if (b.dataset.put != null) {
       var old = favByKey(b.dataset.put);
       var nf = { name: S.place.name, lat: S.place.lat, lon: S.place.lon, env: envNow, spot: S.spot, fish: old ? old.fish : null };
-      if (b.dataset.put === 'q') { nf.fish = (old && old.fish) || S.target; S.queen = nf; } else S.favs[+b.dataset.put] = nf;
+      if (b.dataset.put === 'q') { nf.fish = (old && old.fish) || CT; S.queen = nf; } else S.favs[+b.dataset.put] = nf;
     }
     if (b.dataset.del != null) S.favs[+b.dataset.del] = null;
     save(); renderFavEditor(); loadFavs(); renderFavs();
@@ -1955,7 +2065,7 @@ var PescaEngine = (function () {
   $('yDn').onclick = function () { goMonth(calY - 1, calM); };
   $('hUp').onclick = function () { setSel(sel + H); };
   $('hDn').onclick = function () { setSel(sel - H); };
-  $('slider').oninput = function () { var mid = E.localMidnight(data, sel); setSel(mid + this.value * 30 * 60e3); };
+  $('slider').oninput = $('slider2').oninput = function () { var mid = E.localMidnight(data, sel); setSel(mid + this.value * 30 * 60e3); };
   $('nowBtn').onclick = function () { setSel(Date.now(), true); };
   $('dayChart').onclick = function (e) { var r = this.getBoundingClientRect(), i = this._hit && this._hit(e.clientX - r.left); if (i != null) setSel(E.localMidnight(data, sel) + i * H + 30 * 60e3); };
 
@@ -1975,7 +2085,7 @@ var PescaEngine = (function () {
     var mid = E.localMidnight(data, Date.now());
     if (a === 'now') setSel(Date.now(), true);
     if (a === 'tomorrow') { var c = E.conditions(data, mid + D + 12 * H); setSel(c.sunrise || mid + D + 6 * H); }
-    if (a === 'best') { var b = E.bestWindow(E.dayCurve(data, mid, S.target, S.type, S.env)); setSel(mid + b.from * H + 30 * 60e3); }
+    if (a === 'best') { var b = E.bestWindow(E.dayCurve(data, mid, CT, CY, S.env)); setSel(mid + b.from * H + 30 * 60e3); }
     if (a === 'reload') { favData = {}; load(); }
     if (a === 'help') { $('wHelp').hidden = false; $('wHelp').scrollIntoView({ behavior: 'smooth' }); }
   };
@@ -2102,8 +2212,8 @@ var PescaEngine = (function () {
   }
   function welDone(p) {
     welSeq++;
-    S.place = { name: p.name, lat: p.lat, lon: p.lon }; S.env = 'auto'; S.spot = 'shore'; S.needTarget = true; S.setup = true;
-    E.setSpot(S.spot); $('env').value = S.env; $('spot').value = S.spot; $('place').value = p.name;
+    S.place = { name: p.name, lat: p.lat, lon: p.lon }; S.env = 'auto'; S.spot = 'shore'; S.target = 'auto'; S.type = 'auto'; S.setup = true;
+    E.setSpot(S.spot); $('env').value = S.env; $('spot').value = S.spot; $('place').value = p.name; $('type').value = 'auto'; $('target').value = 'auto';
     save(); $('welcome').hidden = true; load();
   }
   $('welPlace').oninput = function () { clearTimeout(welT); welT = setTimeout(welSearch, 300); };
@@ -2135,9 +2245,360 @@ var PescaEngine = (function () {
   });
   $('wFav').querySelector('[data-min]').addEventListener('click', function () { favOpened = true; setTimeout(renderFavs, 0); });
 
+  // ---------- radar: mappa di Windy (non influenza il resto dell'app) ----------
+  var radar = { ov: 'rain', lat: null, lon: null };
+  function radarUrl() {
+    var la = radar.lat != null ? radar.lat : S.place.lat, lo = radar.lon != null ? radar.lon : S.place.lon;
+    return 'https://embed.windy.com/embed.html?type=map&location=coordinates&metricRain=mm&metricTemp=%C2%B0C&metricWind=km%2Fh&zoom=7&level=surface&product=ecmwf' +
+      '&overlay=' + radar.ov + '&lat=' + la.toFixed(3) + '&lon=' + lo.toFixed(3) + '&detailLat=' + la.toFixed(3) + '&detailLon=' + lo.toFixed(3) + '&marker=true&message=true';
+  }
+  function radarShow() { $('radarCover').hidden = true; $('radarFrame').hidden = false; $('radarFrame').src = radarUrl(); }
+  $('radarOpen').onclick = function () { radar.lat = S.place.lat; radar.lon = S.place.lon; radarShow(); };
+  $('radarCenter').onclick = function () { radar.lat = S.place.lat; radar.lon = S.place.lon; radarShow(); };
+  $('radarBtns').onclick = function (e) {
+    var b = e.target.closest('[data-ov]'); if (!b) return;
+    radar.ov = b.dataset.ov;
+    this.querySelectorAll('[data-ov]').forEach(function (x) { x.classList.toggle('on', x === b); });
+    if (!$('radarFrame').hidden) radarShow();
+  };
+
   if (S.setup) load();
   else { renderWelThemes(); $('welcome').hidden = false; $('place').value = ''; $('stPlace').textContent = 'Scegli dove vai a pescare per iniziare.'; renderFavs(); }
 })();
+</script>
+<script>
+// ===== Pescomante: portafoglio dei permessi di pesca =====
+// Foto (galleria o fotocamera) o PDF, data di scadenza facoltativa, tutto salvato solo sul telefono (IndexedDB).
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var D = 86400e3;
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+
+  // ---------- stile ----------
+  var css = document.createElement('style');
+  css.textContent = [
+    '.pcard { padding: 4px 6px; margin-bottom: 6px; position: relative; }',
+    '.phead { display: flex; align-items: center; gap: 6px; min-height: 28px; cursor: pointer; }',
+    '.phead .pname { flex: 1; min-width: 0; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+    '.phead .pexp { width: 14px; flex: none; text-align: center; }',
+    '.pbadge { font-size: 11px; padding: 1px 5px; white-space: nowrap; color: var(--muted); }',
+    '.pbadge.red { color: #fff; background: #c00000; font-weight: bold; }',
+    '.pmenu { min-height: 24px !important; padding: 0 8px !important; font-weight: bold; }',
+    '.pdrop { position: absolute; right: 6px; top: 32px; z-index: 5; list-style: none; margin: 0; padding: 3px; min-width: 170px; }',
+    '.pdrop li { padding: 6px 10px; cursor: pointer; display: flex; gap: 8px; align-items: center; }',
+    '.pdrop li:hover { background: var(--acc); color: var(--acc-ink); }',
+    '.pdrop li.danger { color: #c00000; }',
+    '.pdrop li.danger:hover { background: #c00000; color: #fff; }',
+    '.pbody { padding: 6px 0 2px; display: grid; gap: 6px; }',
+    '.pbody img { width: 100%; height: auto; display: block; box-shadow: inset 0 0 0 1px var(--sh); }',
+    '.pbody iframe { width: 100%; height: 70vh; border: 0; background: #fff; }',
+    '.pfiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; }',
+    '.pfiles .pf { position: relative; aspect-ratio: 3/4; background: var(--field); box-shadow: inset 1px 1px var(--sh), inset -1px -1px var(--hi); display: grid; place-items: center; overflow: hidden; font-size: 11px; text-align: center; padding: 4px; }',
+    '.pfiles .pf img { width: 100%; height: 100%; object-fit: cover; }',
+    '.pfiles .pf .px { position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; min-height: 0 !important; padding: 0 !important; font-weight: bold; }',
+    '#permDlg .win, #permDel .win { max-width: 420px; }',
+    '#permDlg .body { max-height: 80vh; overflow-y: auto; }',
+    '.prow { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }',
+    '.prow.end { justify-content: flex-end; }',
+    '.linkbtn { background: none; border: 0; padding: 4px 0; color: var(--acc); text-decoration: underline; cursor: pointer; font: inherit; }',
+    '.btn.danger { color: #c00000; font-weight: bold; }',
+    '.taskbar .task .pdot { width: 8px; height: 8px; border-radius: 50%; background: #e00000; flex: none; }',
+    '.pempty { padding: 10px 4px; }',
+    '.popen { min-height: 26px !important; padding: 2px 12px !important; font-weight: bold; }',
+    '#permView { position: fixed; inset: 0; z-index: 30; background: rgba(0,0,0,.85); display: flex; flex-direction: column; }',
+    '#permView .vbar { display: flex; gap: 6px; align-items: center; padding: 6px 8px; background: var(--face); }',
+    '#permView .vbar span { flex: 1; font-weight: bold; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }',
+    '#permView .vbody { flex: 1; overflow: auto; -webkit-overflow-scrolling: touch; display: grid; gap: 8px; padding: 8px; align-content: start; }',
+    '#permView .vbody img { width: 100%; height: auto; display: block; background: #fff; }',
+    '#permView .vbody iframe { width: 100%; height: calc(100vh - 70px); border: 0; background: #fff; }'
+  ].join('\n');
+  document.head.appendChild(css);
+
+  var WALLET = '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="3.5" width="13" height="10" fill="#c8a24a" stroke="#000"/><rect x="1.5" y="3.5" width="13" height="3" fill="#a07a2a" stroke="#000"/><rect x="10" y="8" width="4.5" height="3" fill="#e8d08a" stroke="#000"/><rect x="11.5" y="9" width="1.2" height="1" fill="#000"/></svg>';
+  var TRASH = '<svg width="12" height="13" viewBox="0 0 12 13" aria-hidden="true"><path d="M1 3h10M4 3V1.5h4V3M2.5 3l.7 9h5.6l.7-9M4.8 5v5.5M7.2 5v5.5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>';
+
+  // ---------- struttura ----------
+  var main = document.querySelector('.desk');
+  var deskP = document.createElement('div');
+  deskP.className = 'desk'; deskP.id = 'permDesk'; deskP.hidden = true;
+  deskP.innerHTML =
+    '<section class="win raised" id="wPerm">' +
+    '<div class="title">' + WALLET + '<span>Permessi di pesca</span></div>' +
+    '<div class="body">' +
+    '<div id="permList"></div>' +
+    '<div class="prow"><button class="btn raised" id="permAdd"><b>+ Aggiungi permesso</b></button></div>' +
+    '<p class="muted" style="margin:0">I permessi restano solo su questo telefono, non vanno su internet. Se cancelli l&rsquo;app o i dati del browser si perdono: tieni sempre anche gli originali.</p>' +
+    '</div></section>';
+  main.parentNode.insertBefore(deskP, main.nextSibling);
+
+  var dlg = document.createElement('div');
+  dlg.className = 'modal'; dlg.id = 'permDlg'; dlg.hidden = true;
+  dlg.innerHTML =
+    '<section class="win raised" role="dialog" aria-modal="true" aria-labelledby="pdTitle">' +
+    '<div class="title">' + WALLET + '<span id="pdTitle">Nuovo permesso</span><button class="tbtn raised" id="pdClose" aria-label="Chiudi">&times;</button></div>' +
+    '<div class="body">' +
+    '<label class="lbl"><span id="pdNameLbl">Nome</span><input class="field sunken" id="pdName" maxlength="60" placeholder="Es. Licenza di pesca, Permesso FVG 2026"></label>' +
+    '<div class="prow" id="pdKindRow"><span>Tipo:</span><label><input type="radio" name="pdKind" value="foto" checked> Foto</label><label><input type="radio" name="pdKind" value="doc"> Documento PDF</label></div>' +
+    '<div class="pfiles" id="pdFiles"></div>' +
+    '<div class="prow" id="pdFotoBtns"><button class="btn raised" id="pdCam">Scatta foto</button><button class="btn raised" id="pdGal">Dalla galleria</button></div>' +
+    '<div class="prow" id="pdDocBtns" hidden><button class="btn raised" id="pdDoc">Scegli documento PDF</button></div>' +
+    '<div class="muted" id="pdHint"></div>' +
+    '<div><button class="linkbtn" id="pdExpBtn">+ Aggiungi data di scadenza</button>' +
+    '<label class="lbl" id="pdExpBox" hidden><span>Scadenza (facoltativa)</span><input type="date" class="field sunken" id="pdExp"></label></div>' +
+    '<div class="prow end"><button class="btn raised" id="pdCancel">Annulla</button><button class="btn raised" id="pdSave"><b>Salva</b></button></div>' +
+    '<input type="file" id="pfCam" accept="image/*" capture="environment" hidden>' +
+    '<input type="file" id="pfGal" accept="image/*" multiple hidden>' +
+    '<input type="file" id="pfDoc" accept="application/pdf,.pdf" hidden>' +
+    '</div></section>';
+  document.body.appendChild(dlg);
+
+  var del = document.createElement('div');
+  del.className = 'modal'; del.id = 'permDel'; del.hidden = true;
+  del.innerHTML =
+    '<section class="win raised" role="alertdialog" aria-modal="true" aria-labelledby="pxTitle">' +
+    '<div class="title"><span id="pxTitle">Elimina permesso</span></div>' +
+    '<div class="body"><p style="margin:0" id="pxText"></p>' +
+    '<div class="prow end"><button class="btn raised" id="pxNo">Annulla</button><button class="btn raised danger" id="pxYes">' + TRASH + ' Elimina</button></div></div></section>';
+  document.body.appendChild(del);
+
+  // scheda nella barra in basso
+  var taskBtn = $('taskBtn');
+  var permBtn = document.createElement('button');
+  permBtn.className = 'btn raised task'; permBtn.id = 'permBtn';
+  permBtn.innerHTML = WALLET + '<span>Permessi</span>';
+  taskBtn.parentNode.insertBefore(permBtn, taskBtn.nextSibling);
+
+  // ---------- archivio (IndexedDB) ----------
+  var dbp = null;
+  function db() {
+    if (!dbp) dbp = new Promise(function (res, rej) {
+      var r = indexedDB.open('pescomante', 1);
+      r.onupgradeneeded = function () { if (!r.result.objectStoreNames.contains('permessi')) r.result.createObjectStore('permessi', { keyPath: 'id' }); };
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error); };
+    });
+    return dbp;
+  }
+  function store(mode, fn) {
+    return db().then(function (d) {
+      return new Promise(function (res, rej) {
+        var t = d.transaction('permessi', mode), req = fn(t.objectStore('permessi'));
+        t.oncomplete = function () { res(req ? req.result : undefined); };
+        t.onerror = t.onabort = function () { rej(t.error || new Error('archivio')); };
+      });
+    });
+  }
+  var allP = function () { return store('readonly', function (s) { return s.getAll(); }); };
+  var putP = function (p) { return store('readwrite', function (s) { return s.put(p); }); };
+  var delP = function (id) { return store('readwrite', function (s) { return s.delete(id); }); };
+
+  // ---------- foto: rimpicciolite per non riempire il telefono, ma leggibili ----------
+  function shrink(file) {
+    if (!/^image\//.test(file.type) || file.size < 900e3) return Promise.resolve(file);
+    return new Promise(function (res) {
+      var url = URL.createObjectURL(file), im = new Image();
+      im.onload = function () {
+        var k = Math.min(1, 2200 / Math.max(im.naturalWidth, im.naturalHeight));
+        var c = document.createElement('canvas'); c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+        c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        c.toBlob(function (b) { res(b && b.size < file.size ? b : file); }, 'image/jpeg', 0.85);
+      };
+      im.onerror = function () { URL.revokeObjectURL(url); res(file); };
+      im.src = url;
+    });
+  }
+
+  // ---------- scadenza ----------
+  function today0() { var n = new Date(); return Date.UTC(n.getFullYear(), n.getMonth(), n.getDate()); }
+  function expInfo(exp) {
+    if (!exp) return null;
+    var p = exp.split('-'), t = Date.UTC(+p[0], +p[1] - 1, +p[2]), days = Math.round((t - today0()) / D), it = p[2] + '/' + p[1] + '/' + p[0];
+    if (days < 0) return { red: true, text: 'Scaduto il ' + it };
+    if (days === 0) return { red: true, text: 'Scade oggi' };
+    if (days <= 31) return { red: true, text: 'Scade tra ' + days + (days === 1 ? ' giorno' : ' giorni') };
+    return { red: false, text: 'Scade il ' + it };
+  }
+
+  // ---------- elenco ----------
+  var urls = [], open = {}, cache = [];
+  function freeUrls() { urls.forEach(function (u) { URL.revokeObjectURL(u); }); urls = []; }
+  function render() {
+    return allP().then(function (list) {
+      cache = list.sort(function (a, b) { return a.created - b.created; });
+      freeUrls();
+      var box = $('permList');
+      if (!cache.length) { box.innerHTML = '<div class="pempty muted">Nessun permesso salvato. Tocca &laquo;Aggiungi permesso&raquo; per fotografare o caricare il tuo primo permesso.</div>'; }
+      else box.innerHTML = cache.map(function (p) {
+        var ex = expInfo(p.exp), isOpen = !!open[p.id], files = '';
+        if (isOpen) files = p.files.map(function (f) {
+          var u = URL.createObjectURL(f.blob); urls.push(u);
+          return /pdf/.test(f.type)
+            ? '<iframe src="' + u + '" title="' + esc(f.name || 'Documento') + '"></iframe>'
+            : '<img src="' + u + '" alt="' + esc(p.name) + '">';
+        }).join('');
+        return '<div class="pcard sunken" data-id="' + p.id + '">' +
+          '<div class="phead" data-tog="' + p.id + '"><span class="pname">' + esc(p.name) + '</span>' +
+          (ex ? '<span class="pbadge' + (ex.red ? ' red' : '') + '">' + ex.text + '</span>' : '') +
+          '<button class="btn raised popen" data-tog="' + p.id + '">' + (isOpen ? 'Chiudi' : 'Apri') + '</button>' +
+          '<button class="btn raised pmenu" data-menu="' + p.id + '" aria-label="Menu del permesso">&#8801;</button></div>' +
+          '<ul class="pdrop raised" data-drop="' + p.id + '" hidden>' +
+          '<li data-a="edit" data-id="' + p.id + '">&#9998;&#xFE0E; Modifica</li>' +
+          '<li data-a="renew" data-id="' + p.id + '">&#8635;&#xFE0E; Rinnova</li>' +
+          '<li data-a="del" data-id="' + p.id + '" class="danger">' + TRASH + ' Elimina</li></ul>' +
+          (isOpen ? '<div class="pbody"><div class="prow"><button class="btn raised" data-full="' + p.id + '"><b>Schermo intero</b></button></div>' + files + '</div>' : '') + '</div>';
+      }).join('');
+      var warn = cache.some(function (p) { var e = expInfo(p.exp); return e && e.red; });
+      var dot = permBtn.querySelector('.pdot');
+      if (warn && !dot) permBtn.insertAdjacentHTML('beforeend', '<i class="pdot" title="Un permesso sta per scadere"></i>');
+      if (!warn && dot) dot.remove();
+    }).catch(function () {
+      $('permList').innerHTML = '<div class="pempty err">Questo browser non permette di salvare i permessi.</div>';
+    });
+  }
+  function closeDrops() { document.querySelectorAll('.pdrop').forEach(function (u) { u.hidden = true; }); }
+  $('permList').addEventListener('click', function (e) {
+    var m = e.target.closest('[data-menu]');
+    if (m) { e.stopPropagation(); var u = document.querySelector('[data-drop="' + m.dataset.menu + '"]'), was = !u.hidden; closeDrops(); u.hidden = was; return; }
+    var a = e.target.closest('[data-a]');
+    if (a) {
+      e.stopPropagation(); closeDrops();
+      var p = cache.find(function (x) { return x.id === a.dataset.id; }); if (!p) return;
+      if (a.dataset.a === 'edit') openDlg('edit', p);
+      if (a.dataset.a === 'renew') openDlg('renew', p);
+      if (a.dataset.a === 'del') askDelete(p);
+      return;
+    }
+    var fu = e.target.closest('[data-full]');
+    if (fu) { e.stopPropagation(); var pf = cache.find(function (x) { return x.id === fu.dataset.full; }); if (pf) showFull(pf); return; }
+    var t = e.target.closest('[data-tog]');
+    if (t) { open[t.dataset.tog] = !open[t.dataset.tog]; render(); }
+  });
+  document.addEventListener('click', closeDrops);
+
+  // ---------- finestra aggiungi / modifica / rinnova ----------
+  var mode = 'new', cur = null, files = [], expTouched = false, thumbs = [];
+  function kind() { return document.querySelector('input[name=pdKind]:checked').value; }
+  function showKind() {
+    var k = kind();
+    $('pdFotoBtns').hidden = k !== 'foto'; $('pdDocBtns').hidden = k !== 'doc';
+    $('pdHint').textContent = k === 'foto' ? (files.length ? 'Puoi aggiungere altre pagine con "Scatta foto" o "Dalla galleria".' : 'Fotografa il permesso o sceglilo dalla galleria. Puoi aggiungere più pagine.') : 'Scegli il PDF del permesso.';
+  }
+  function drawFiles() {
+    thumbs.forEach(function (u) { URL.revokeObjectURL(u); }); thumbs = [];
+    $('pdFiles').innerHTML = files.map(function (f, i) {
+      var inner;
+      if (/pdf/.test(f.type)) inner = '<span>PDF<br>' + esc(f.name || 'documento') + '</span>';
+      else { var u = URL.createObjectURL(f.blob); thumbs.push(u); inner = '<img src="' + u + '" alt="Pagina ' + (i + 1) + '">'; }
+      return '<div class="pf">' + inner + '<button class="btn raised px" data-rm="' + i + '" aria-label="Togli questo file">&times;</button></div>';
+    }).join('');
+    showKind();
+  }
+  function setExpUI(has) {
+    $('pdExpBox').hidden = !expTouched;
+    $('pdExpBtn').hidden = expTouched;
+    $('pdExpBtn').textContent = has ? '✎︎ Aggiorna data di scadenza' : '+ Aggiungi data di scadenza';
+  }
+  function openDlg(m, p) {
+    mode = m; cur = p || null; expTouched = false;
+    files = m === 'edit' ? p.files.slice() : [];
+    $('pdTitle').textContent = m === 'new' ? 'Nuovo permesso' : m === 'edit' ? 'Modifica: ' + p.name : 'Rinnova: ' + p.name;
+    $('pdName').value = p ? p.name : '';
+    $('pdNameLbl').innerHTML = m === 'edit' ? '&#9998;&#xFE0E; Nome' : 'Nome';
+    $('pdName').readOnly = m === 'renew';
+    var k = p && p.files.length && /pdf/.test(p.files[0].type) ? 'doc' : 'foto';
+    document.querySelector('input[name=pdKind][value=' + k + ']').checked = true;
+    $('pdExp').value = p && p.exp ? p.exp : '';
+    setExpUI(!!(p && p.exp));
+    $('pdHint').textContent = '';
+    if (m === 'renew') $('pdHint').textContent = 'Carica le foto o il documento nuovi: prenderanno il posto dei vecchi.';
+    drawFiles();
+    if (m === 'renew') $('pdHint').textContent = 'Carica le foto o il documento nuovi: prenderanno il posto dei vecchi.';
+    dlg.hidden = false;
+    if (m !== 'renew') setTimeout(function () { $('pdName').focus(); }, 50);
+  }
+  function closeDlg() { dlg.hidden = true; thumbs.forEach(function (u) { URL.revokeObjectURL(u); }); thumbs = []; files = []; }
+  $('pdClose').onclick = $('pdCancel').onclick = closeDlg;
+  dlg.querySelectorAll('input[name=pdKind]').forEach(function (r) { r.onchange = showKind; });
+  $('pdCam').onclick = function () { $('pfCam').click(); };
+  $('pdGal').onclick = function () { $('pfGal').click(); };
+  $('pdDoc').onclick = function () { $('pfDoc').click(); };
+  function addFiles(list) {
+    var arr = [].slice.call(list || []);
+    return Promise.all(arr.map(function (f) { return shrink(f).then(function (b) { return { type: b.type || f.type, name: f.name, blob: b }; }); }))
+      .then(function (got) {
+        if (got.some(function (g) { return /pdf/.test(g.type); })) files = files.filter(function (f) { return /pdf/.test(f.type); });
+        files = files.concat(got); drawFiles();
+      });
+  }
+  ['pfCam', 'pfGal', 'pfDoc'].forEach(function (id) { $(id).onchange = function () { var l = this.files; addFiles(l); this.value = ''; }; });
+  $('pdFiles').onclick = function (e) { var b = e.target.closest('[data-rm]'); if (b) { files.splice(+b.dataset.rm, 1); drawFiles(); } };
+  $('pdExpBtn').onclick = function () { expTouched = true; setExpUI(!!$('pdExp').value); $('pdExp').focus(); };
+  $('pdSave').onclick = function () {
+    var name = $('pdName').value.trim();
+    if (!name) { $('pdHint').textContent = 'Scrivi un nome per il permesso.'; $('pdName').focus(); return; }
+    if (!files.length) { $('pdHint').textContent = 'Aggiungi almeno una foto o un documento.'; return; }
+    var now = Date.now();
+    var p = cur ? Object.assign({}, cur) : { id: 'p' + now.toString(36) + Math.random().toString(36).slice(2, 6), created: now };
+    p.name = name; p.files = files.slice(); p.updated = now;
+    // la scadenza cambia solo se l'utente l'ha toccata; altrimenti resta quella di prima
+    if (expTouched) p.exp = $('pdExp').value || null; else if (!cur) p.exp = null;
+    if (mode === 'renew') p.renewed = now;
+    putP(p).then(function () {
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
+      closeDlg(); render();
+    }).catch(function () { $('pdHint').textContent = 'Salvataggio non riuscito: spazio pieno o browser non compatibile.'; });
+  };
+
+  // ---------- visore a schermo intero (dentro l'app, funziona anche sull'iPhone) ----------
+  var view = document.createElement('div');
+  view.id = 'permView'; view.hidden = true;
+  view.innerHTML = '<div class="vbar raised"><span id="pvName"></span><a class="btn raised" id="pvSave" download>Salva sul telefono</a><button class="btn raised" id="pvClose"><b>Chiudi</b></button></div><div class="vbody" id="pvBody"></div>';
+  document.body.appendChild(view);
+  var vurls = [];
+  function showFull(p) {
+    vurls.forEach(function (u) { URL.revokeObjectURL(u); }); vurls = [];
+    $('pvName').textContent = p.name;
+    $('pvBody').innerHTML = p.files.map(function (f) {
+      var u = URL.createObjectURL(f.blob); vurls.push(u);
+      return /pdf/.test(f.type) ? '<iframe src="' + u + '" title="' + esc(p.name) + '"></iframe>' : '<img src="' + u + '" alt="' + esc(p.name) + '">';
+    }).join('');
+    var first = p.files[0];
+    $('pvSave').href = vurls[0] || '#';
+    $('pvSave').setAttribute('download', (p.name || 'permesso').replace(/[^A-Za-z0-9À-ÿ _-]+/g, '') + (first && /pdf/.test(first.type) ? '.pdf' : '.jpg'));
+    $('pvSave').hidden = p.files.length !== 1;
+    view.hidden = false;
+  }
+  $('pvClose').onclick = function () { view.hidden = true; vurls.forEach(function (u) { URL.revokeObjectURL(u); }); vurls = []; $('pvBody').innerHTML = ''; };
+
+  // ---------- elimina (con conferma) ----------
+  var toDel = null;
+  function askDelete(p) { toDel = p; $('pxText').innerHTML = 'Sei sicuro di cancellare definitivamente il permesso &laquo;' + esc(p.name) + '&raquo;? Le foto e i documenti non si potranno recuperare.'; del.hidden = false; }
+  $('pxNo').onclick = function () { del.hidden = true; toDel = null; };
+  $('pxYes').onclick = function () { if (!toDel) return; var id = toDel.id; delP(id).then(function () { delete open[id]; del.hidden = true; toDel = null; render(); }); };
+  [dlg, del].forEach(function (m) { m.addEventListener('click', function (e) { if (e.target === m) m.hidden = true; }); });
+
+  // ---------- passaggio tra Pescomante e Permessi ----------
+  var installWasShown = false;
+  function view(v) {
+    var perm = v === 'perm';
+    main.hidden = perm; deskP.hidden = !perm;
+    var ib = $('installBar');
+    if (ib) { if (perm) { installWasShown = !ib.hidden; ib.hidden = true; } else if (installWasShown) ib.hidden = false; }
+    permBtn.classList.toggle('on', perm); taskBtn.classList.toggle('on', !perm);
+    window.scrollTo(0, 0);
+    if (perm) render();
+  }
+  permBtn.onclick = function (e) { e.stopPropagation(); view('perm'); };
+  taskBtn.onclick = function () { if (!main.hidden) window.scrollTo({ top: 0, behavior: 'smooth' }); else view('main'); };
+  $('permAdd').onclick = function () { openDlg('new'); };
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { if (!dlg.hidden) closeDlg(); del.hidden = true; if (!view.hidden) $('pvClose').click(); } });
+
+  // all'avvio: pallino rosso se un permesso sta per scadere
+  if (window.indexedDB) render();
+})();
+
 </script>
 </body>
 </html>
