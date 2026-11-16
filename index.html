@@ -1615,7 +1615,7 @@ var PescaEngine = (function () {
 <script>
 (function () {
   'use strict';
-  var APP_NAME = 'Pescomante', APP_VERSION = '48', APP_DATE = '2026-11-16';
+  var APP_NAME = 'Pescomante', APP_VERSION = '50', APP_DATE = '2026-11-16';
   var E = PescaEngine, H = E.H, D = E.D;
   var $ = function (id) { return document.getElementById(id); };
   var GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
@@ -3699,7 +3699,6 @@ var PescaEngine = (function () {
     '<div class="muted" id="udWhen"></div>' +
     '<label class="lbl"><span>Nome dell&rsquo;uscita</span><input class="field sunken" id="udName" maxlength="50" placeholder="Es. Tonni a Rimini, Spigole al Tagliamento"></label>' +
     '<label id="udOverRow" hidden style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="udOver" checked> <span id="udOverTxt"></span></label>' +
-    REMHTML.replace(/RNAME/g, 'udR') +
     '<div class="err" id="udHint"></div>' +
     '<div class="row" style="justify-content:flex-end;gap:6px"><button class="btn raised" id="udNo">Annulla</button><button class="btn raised" id="udYes"><b>Salva</b></button></div></div>');
   var remDlg = modal('uRem', '<div class="title"><span>' + BELL + ' Promemoria</span></div><div class="body"><div class="muted" id="urWhat"></div>' + REMHTML.replace(/RNAME/g, 'urR') +
@@ -3756,23 +3755,17 @@ var PescaEngine = (function () {
     setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
   }
   var iosDlg = modal('uIos', '<div class="title"><span>' + BELL + ' Aggiungi il promemoria</span></div><div class="body"><div class="muted" id="uiWhat"></div>' +
-    '<a class="btn raised" id="uiApple" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px"><b>Calendario dell&rsquo;iPhone</b></a>' +
-    '<a class="btn raised" id="uiGoogle" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:6px">Google Calendar</a>' +
-    '<button class="btn raised" id="uiFile" style="display:block;width:100%;margin-top:6px">Salva il file (poi aprilo da File)</button>' +
-    '<div class="muted" style="font-size:11px;margin-top:6px">Con Google Calendar gli avvisi sono quelli impostati in Google, non quelli scelti qui.</div>' +
+    '<a class="btn raised" id="uiGoogle" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;padding:8px"><b>Apri in Google Calendar</b></a>' +
+    '<div class="muted" style="font-size:11px;margin-top:6px">Su iPhone il promemoria va in Google Calendar. Gli avvisi sono quelli predefiniti di Google (li cambi nelle impostazioni di Google Calendar); nell&rsquo;evento trovi scritto quando volevi essere avvisato.</div>' +
     '<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn raised" id="uiClose">Chiudi</button></div></div>');
   function gDate(t) { return new Date(t).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
   function iosRem(u, txt, fname) {
     $('uiWhat').innerHTML = '<b>' + esc(u.name) + '</b><br>' + esc(whenTxt(u.t, tzOf(u)));
-    $('uiApple').href = 'ics.html#d=' + enc(txt);
+    var r = u.rem || {}, want = [];
+    if (r.h) want.push(r.h + (r.h === 1 ? ' ora' : ' ore') + ' prima'); if (r.m15) want.push('15 minuti prima');
     $('uiGoogle').href = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('🎣 ' + u.name) +
       '&dates=' + gDate(u.t) + '/' + gDate(u.t + 3 * 3600e3) + '&location=' + encodeURIComponent(u.place.name + ' (' + u.place.lat.toFixed(5) + ', ' + u.place.lon.toFixed(5) + ')') +
-      '&details=' + encodeURIComponent((u.snap.targetName || '') + ' · ' + (u.snap.typeName || '') + ' · probabilità ' + u.snap.pct + '%');
-    $('uiFile').onclick = function () {
-      var f = new File([txt], fname, { type: 'text/calendar' });
-      if (navigator.canShare && navigator.canShare({ files: [f] })) navigator.share({ files: [f], title: u.name }).catch(function () {});
-      else { var url = URL.createObjectURL(f), a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove(); }
-    };
+      '&details=' + encodeURIComponent((want.length ? 'Avvisami ' + want.join(' e ') + '.\n' : '') + (u.snap.targetName || '') + ' · ' + (u.snap.typeName || '') + ' · ' + (u.spot === 'boat' ? 'in barca' : 'da riva') + ' · probabilità ' + u.snap.pct + '% (Pescomante)');
     iosDlg.hidden = false;
   }
   $('uiClose').onclick = function () { iosDlg.hidden = true; };
@@ -3809,7 +3802,6 @@ var PescaEngine = (function () {
     $('udWhen').innerHTML = esc(snap.when) + '<br>' + esc(snap.place.name) + ' &middot; ' + esc(snap.targetName) + ' &middot; ' + esc(snap.typeName) + ' &middot; <b>' + snap.pct + '%</b>';
     $('udName').value = u ? u.name : '';
     $('udOverRow').hidden = true;
-    setRem('udR', u ? u.rem : null);
     $('udHint').textContent = '';
     dlg.hidden = false; setTimeout(function () { $('udName').focus(); }, 50);
   }
@@ -3823,14 +3815,13 @@ var PescaEngine = (function () {
   $('udYes').onclick = function () {
     var n = $('udName').value.trim();
     if (!n) { $('udHint').textContent = 'Scrivi un nome per l\u2019uscita.'; $('udName').focus(); return; }
-    var r = readRem('udR'), over = saveMode === 'over' && editId && find(editId);
+    var r = { h: 0, m15: false }, over = saveMode === 'over' && editId && find(editId);
     var u = fromSnap(pending, n, over ? editId : null, r);
     if (over) { var old = find(editId); u.created = old.created; list = list.map(function (x) { return x.id === editId ? u : x; }); }
     else list.push(u);
     if (!saveU()) { $('udHint').textContent = 'Salvataggio non riuscito su questo browser.'; return; }
     editId = u.id; openMap[u.id] = true; saveOpen();
     dlg.hidden = true; pending = null; showEdit(); refreshAll();
-    if (r.h || r.m15) sendIcs(u);
     var then = afterSave; afterSave = null; if (then) then(u);
   };
   document.querySelectorAll('.outSave').forEach(function (b) { b.onclick = function () { openSave(); }; });
@@ -3870,7 +3861,7 @@ var PescaEngine = (function () {
   }
   function btnsHtml(u) {
     return '<div class="ubtns"><button class="btn raised" data-open="' + u.id + '"><b>Apri in Pescomante</b></button><button class="btn raised" data-share="' + u.id + '">Condividi</button>' +
-      '<button class="btn raised ualarm' + (u.rem && (u.rem.h || u.rem.m15) ? ' on' : '') + '" data-rem="' + u.id + '" title="Promemoria">' + BELL + ' Promemoria</button><button class="btn raised danger" data-del="' + u.id + '">Elimina</button></div>';
+      '<button class="btn raised danger" data-del="' + u.id + '">Elimina</button></div>';
   }
   function renderList() {
     var box = $('uList'), a = byT();
@@ -3879,7 +3870,6 @@ var PescaEngine = (function () {
     box.innerHTML = a.map(function (u) {
       var open = !!openMap[u.id], tp = tparts(u.t, tzOf(u)), past = u.t < now - 6 * 3600e3;
       return '<section class="win raised uwin" style="margin-bottom:8px' + (past ? ';opacity:.85' : '') + '"><div class="title"><span>' + esc(u.name) + '<span class="usub">' + tp.d + '/' + (tp.mo + 1) + ' ' + pad(tp.h) + ':' + pad(tp.mi) + ' &middot; ' + (u.snap && u.snap.pct) + '%</span></span>' +
-        '<button class="tbtn raised ualarm' + (u.rem && (u.rem.h || u.rem.m15) ? ' on' : '') + '" data-rem="' + u.id + '" aria-label="Promemoria" title="Promemoria">' + BELL + '</button>' +
         '<button class="tbtn raised" data-tog="' + u.id + '" aria-label="' + (open ? 'Riduci' : 'Apri') + '">' + (open ? '_' : '\u25A1') + '</button></div>' +
         (open ? '<div class="body">' + detailsHtml(u) + btnsHtml(u) + '</div>' : '') + '</section>';
     }).join('');
