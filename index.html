@@ -317,7 +317,7 @@ canvas.chart { width: 100%; display: block; }
           <div class="topgrid">
             <div class="topctl">
               <div class="row">
-                <label class="lbl grow"><span><u>L</u>ocalit&agrave;</span><input class="field sunken" id="place" autocomplete="off" placeholder="Es. Lignano, Caorle, Rimini"></label>
+                <label class="lbl grow"><span><u>L</u>ocalit&agrave;</span><input class="field sunken" id="place" autocomplete="off" placeholder="Es. Lignano, Venezia, Rimini"></label>
                 <button class="btn raised" id="searchBtn">Cerca</button>
                 <button class="btn raised" id="gpsBtn" title="Usa la mia posizione">GPS</button>
               </div>
@@ -427,7 +427,7 @@ canvas.chart { width: 100%; display: block; }
       <div id="welStep2" hidden>
         <h2>2. Dove vai a pescare?</h2>
         <p class="muted">Cerca il tuo posto o usa la posizione del telefono. I posti preferiti li aggiungi dopo, quando vuoi.</p>
-        <div class="row"><input class="field sunken grow" id="welPlace" autocomplete="off" placeholder="Es. Palermo, Lago di Garda, Cairns"><button class="btn raised" id="welGps">Usa la mia posizione</button></div>
+        <div class="row"><input class="field sunken grow" id="welPlace" autocomplete="off" placeholder="Es. Lignano, Venezia, Rimini"><button class="btn raised" id="welGps">Usa la mia posizione</button></div>
         <div class="listbox sunken" id="welRes" hidden></div>
         <div class="row2" style="margin-top:8px"><button class="btn raised" id="welBack">&laquo; Indietro</button><span class="muted" id="welMsg"></span></div>
       </div>
@@ -495,8 +495,8 @@ var PescaEngine = (function () {
     { id: 'serra', name: 'Serra', hab: 'sea', season: [0,0,0,.1,.3,.6,.9,1,1,.8,.3,.05], temp: [15,19,26,29], light: [1,.7,1,.2], tide: .6, wave: [0,.2,1,1.8], moon: null },
     { id: 'sgombro', name: 'Sgombro', hab: 'sea', season: [.1,.1,.2,.5,.8,.9,.8,.7,.8,.7,.4,.2], temp: [11,14,22,26], light: [1,.8,1,.3], tide: .5, wave: [0,0,.6,1.5], moon: null },
     { id: 'sugarello', name: 'Sugarello', hab: 'sea', season: [.2,.2,.3,.5,.7,.9,1,1,.9,.7,.4,.2], temp: [12,15,24,28], light: [1,.6,1,.6], tide: .4, wave: [0,0,.6,1.4], moon: null },
-    { id: 'leccia', name: 'Leccia amia', hab: 'sea', season: [0,0,0,.1,.3,.5,.8,1,1,.8,.3,0], temp: [16,20,27,30], light: [1,.7,1,.2], tide: .5, wave: [0,.2,1,1.8], moon: null },
-    { id: 'alletterato', name: 'Alletterato', hab: 'sea', season: [.05,0,0,0,.05,.3,.6,.85,1,1,.9,.4], temp: [12,16,27,30], light: [1,.7,1,.1], tide: .3, wave: [0,0,.8,1.6], moon: null },
+    { id: 'leccia', name: 'Leccia amia', hab: 'sea', season: [0,0,0,.1,.3,.5,.7,.9,1,1,.6,.2], temp: [16,20,27,30], light: [1,.7,1,.2], tide: .5, wave: [0,.2,1,1.8], moon: null },
+    { id: 'alletterato', name: 'Alletterato', hab: 'sea', season: [.1,.05,.1,.3,.5,.5,.6,.8,1,1,.9,.5], temp: [12,16,27,30], light: [1,.7,1,.1], tide: .3, wave: [0,0,.8,1.6], moon: null },
     { id: 'tonno', name: 'Tonno rosso', hab: 'sea', season: [.15,.05,0,.05,.2,.5,.75,.9,1,1,.9,.5], temp: [10,14,25,29], light: [1,.7,.9,.3], tide: .3, wave: [0,0,1,2], moon: null },
     { id: 'cefalo', name: 'Cefalo', hab: 'both', season: [.5,.5,.6,.8,.9,1,1,1,1,.9,.8,.6], temp: [8,12,26,30], light: [.9,1,.9,.4], tide: .5, wave: [0,0,.5,1.2], moon: null },
     { id: 'seppia', name: 'Seppia', hab: 'sea', season: [.3,.4,.8,1,.9,.5,.3,.3,.5,.8,.9,.6], temp: [10,13,20,25], light: [.8,.5,.9,.9], tide: .5, wave: [0,0,.3,.8], moon: 'new' },
@@ -515,10 +515,10 @@ var PescaEngine = (function () {
     { id: 'gt', name: 'GT (carango gigante)', hab: 'sea', season: [.9,.9,.9,.95,1,1,1,1,1,1,.95,.9], temp: [22,25,30,33], light: [1,.7,1,.3], tide: .8, wave: [0,.3,1.2,2.2], moon: null },
     { id: 'hucho', name: 'Hucho (huchen/taimen)', hab: 'fresh', season: [.7,.6,.4,.2,.1,.1,.1,.2,.5,.9,1,.9], temp: [0,3,12,17], light: [1,.6,1,.3], tide: 0, wave: null, moon: null },
     // --- Mediterraneo ---
-    { id: 'ricciola', name: 'Ricciola', hab: 'sea', season: [.1,.1,.1,.2,.4,.7,.9,1,1,.9,.5,.2], temp: [16,19,26,29], light: [1,.7,1,.2], tide: .5, wave: [0,.2,1,2], moon: null },
-    { id: 'dentice', name: 'Dentice', hab: 'sea', season: [.2,.2,.3,.5,.8,1,.9,.8,.9,1,.7,.3], temp: [13,16,24,27], light: [1,.8,.9,.1], tide: .4, wave: [0,0,.8,1.5], moon: null },
+    { id: 'ricciola', name: 'Ricciola', hab: 'sea', season: [.1,.1,.1,.2,.4,.7,.85,.9,1,1,.7,.35], temp: [16,19,26,29], light: [1,.7,1,.2], tide: .5, wave: [0,.2,1,2], moon: null },
+    { id: 'dentice', name: 'Dentice', hab: 'sea', season: [.2,.2,.3,.65,.9,1,.8,.7,.9,1,.8,.4], temp: [13,16,24,27], light: [1,.8,.9,.1], tide: .4, wave: [0,0,.8,1.5], moon: null },
     { id: 'sarago', name: 'Sarago', hab: 'sea', season: [.8,.8,.7,.6,.6,.6,.6,.6,.7,.9,1,1], temp: [10,14,24,28], light: [1,.6,1,.7], tide: .7, wave: [.2,.5,1.5,2.5], moon: null },
-    { id: 'lampuga', name: 'Lampuga (mahi-mahi)', hab: 'sea', season: [.85,.85,.85,.85,.9,1,1,1,1,1,.9,.85], temp: [20,23,30,32], light: [1,.8,.9,.1], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
+    { id: 'lampuga', name: 'Lampuga (mahi-mahi)', hab: 'sea', season: [.85,.85,.85,.85,.9,1,1,1,1,1,.9,.85], temp: [20,23,29,31], light: [1,.8,.9,.1], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
     { id: 'barracuda', name: 'Barracuda', hab: 'sea', season: [.85,.85,.85,.9,.9,1,1,1,1,1,.9,.85], temp: [18,22,30,33], light: [1,.6,1,.4], tide: .6, wave: [0,0,1,2], moon: null },
     // --- acque interne Europa ---
     { id: 'lucioperca', name: 'Lucioperca', hab: 'fresh', season: [.8,.7,.6,.4,.4,.6,.6,.6,.8,1,1,.9], temp: [4,12,22,27], light: [1,.4,1,.9], tide: 0, wave: null, moon: null },
@@ -531,13 +531,13 @@ var PescaEngine = (function () {
     { id: 'striper', name: 'Striped bass', hab: 'both', season: [.2,.2,.4,.7,1,.8,.5,.5,.7,1,.9,.4], temp: [8,12,22,26], light: [1,.5,1,.8], tide: .8, wave: [0,.3,1.2,2], moon: null },
     { id: 'redfish', name: 'Red drum (redfish)', hab: 'both', season: [.6,.6,.7,.8,.8,.8,.8,.9,1,1,.9,.7], temp: [10,18,28,31], light: [1,.7,1,.6], tide: .9, wave: [0,0,.8,1.5], moon: null },
     // --- tropici: flats e costa ---
-    { id: 'tarpon', name: 'Tarpon', hab: 'both', season: [.2,.2,.4,.7,1,1,.9,.7,.5,.4,.3,.2], temp: [22,26,31,34], light: [1,.6,1,.7], tide: .8, wave: [0,0,.8,1.5], moon: null },
+    { id: 'tarpon', name: 'Tarpon', hab: 'both', season: [.2,.2,.4,.7,1,1,.9,.7,.5,.4,.3,.2], temp: [20,24,30,34], light: [1,.6,1,.7], tide: .8, wave: [0,0,.8,1.5], moon: null },
     { id: 'bonefish', name: 'Bonefish', hab: 'sea', season: [.7,.7,.9,1,1,.9,.8,.8,.9,1,.9,.7], temp: [20,24,30,33], light: [.8,1,.8,.1], tide: 1, wave: [0,0,.5,1], moon: null },
     { id: 'permit', name: 'Permit', hab: 'sea', season: [.4,.5,.8,1,1,.9,.8,.8,.7,.6,.5,.4], temp: [21,24,30,33], light: [.6,1,.7,.2], tide: .9, wave: [0,0,.6,1.2], moon: null },
     { id: 'snook', name: 'Snook (robalo)', hab: 'both', season: [.5,.5,.7,.9,1,1,1,1,.9,.9,.7,.5], temp: [19,24,30,33], light: [1,.5,1,.9], tide: .9, wave: [0,0,.8,1.5], moon: null },
     // --- tropici: altura ---
     { id: 'vela', name: 'Pesce vela', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [22,25,29,31], light: [1,.9,.9,.1], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
-    { id: 'wahoo', name: 'Wahoo', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [21,24,29,31], light: [1,.8,.9,.2], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
+    { id: 'wahoo', name: 'Wahoo', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [19,23,28,31], light: [1,.8,.9,.2], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
     { id: 'pinnagialla', name: 'Tonno pinna gialla', hab: 'sea', season: [.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9,.9], temp: [18,22,29,31], light: [1,.8,.9,.4], tide: .1, wave: [0,.3,1.5,2.5], moon: null },
     { id: 'sgombroreale', name: 'Sgombro reale (king/spanish mackerel)', hab: 'sea', season: [.2,.2,.4,.7,.9,1,1,1,1,.8,.5,.3], temp: [20,23,29,32], light: [1,.7,1,.3], tide: .5, wave: [0,.2,1.2,2], moon: null },
     // --- fiumi esotici ---
@@ -549,6 +549,8 @@ var PescaEngine = (function () {
     { id: 'smallmouth', name: 'Smallmouth bass', hab: 'fresh', season: [.2,.2,.4,.7,1,.9,.8,.8,.9,1,.7,.3], temp: [8,15,26,29], light: [1,.7,1,.2], tide: 0, wave: null, moon: null },
     { id: 'grongo', name: 'Grongo', hab: 'sea', season: [.8,.8,.8,.8,.8,.7,.7,.7,.8,.9,1,.9], temp: [8,11,20,25], light: [.4,.1,.7,1], tide: .4, wave: [0,0,1,2], moon: 'new' },
     { id: 'cavedano', name: 'Cavedano', hab: 'fresh', season: [.6,.6,.7,.8,.8,.9,1,1,1,.9,.8,.7], temp: [1,7,25,29], light: [1,.9,1,.4], tide: 0, wave: null, moon: null },
+    { id: 'akame', name: 'Akame', hab: 'both', season: [.2,.2,.3,.5,.7,.9,1,1,1,.8,.5,.3], temp: [16,20,28,31], light: [1,.3,1,1], tide: .8, wave: [0,0,.8,1.5], moon: null },
+    { id: 'suzuki', name: 'Seabass giapponese (suzuki)', hab: 'both', season: [.4,.4,.6,.8,.8,.7,.7,.8,1,1,.9,.6], temp: [8,12,26,30], light: [1,.5,1,.9], tide: .9, wave: [0,.3,1.2,2], moon: null },
     { id: 'murraycod', name: 'Murray cod', hab: 'fresh', season: [.7,.7,.7,.7,.7,.7,.7,.7,.7,.7,.7,.7], temp: [12,16,26,30], light: [1,.6,1,.8], tide: 0, wave: null, moon: null }
   ];
 
@@ -609,11 +611,100 @@ var PescaEngine = (function () {
     smallmouth: [[30, 52, -100, -64], [32, 50, -125, -100], [-35, -30, 18, 24], [33, 44, 135, 146]],
     grongo: [[14, 65, -25, 42]],
     cavedano: [[36, 62, -10, 45]],
+    akame: [[31, 34, 130.5, 134.5]],
+    suzuki: [[30, 46, 125, 146], [22, 41, 108, 125]],
     murraycod: [[-38, -26, 138, 152, [1, 1, .9, .8, .6, .5, .5, .6, .7, .8, .9, .9]]]
+  });
+  // Adriatico italiano e croato (per stagioni che valgono solo lì)
+  function ADRIATICO(la, lo) {
+    if (la >= 46 || la < 40 || lo >= 20) return false;
+    if (la >= 44) return lo >= 12;
+    if (la >= 42) return lo >= 13.4;
+    if (la >= 40.75) return lo >= 14.9;
+    return lo >= 17.9;
+  }
+  // Stagioni regionali da ricerca con fonti (vedi FONTI.md). Il primo riquadro che contiene il posto vince.
+  var A = function (la1, la2, lo1, lo2, s) { return s ? [la1, la2, lo1, lo2, s] : [la1, la2, lo1, lo2]; };
+  Object.assign(RANGES, {
+    vela: [
+      A(24, 30, -82, -79, [1, 1, .9, .8, .6, .3, .3, .3, .3, .5, .8, 1]),          // Florida SE
+      A(18, 30, -118, -102, [.2, .2, .2, .4, .7, .8, .9, .9, 1, 1, .8, .4]),       // Messico Pacifico
+      A(12, 18, -95, -87, [1, 1, 1, .9, .8, .6, .5, .5, .5, .6, .8, 1]),          // Guatemala
+      A(8, 12, -88, -83, [1, 1, 1, 1, .7, .7, .7, .6, .5, .4, .6, .9]),           // Costa Rica Pacifico
+      A(10, 24, -90, -60, [.9, 1, 1, 1, .8, .6, .4, .3, .3, .3, .4, .6]),         // Caraibi, Isla Mujeres
+      A(-8, 5, 38, 52, [1, 1, .8, .3, .2, .2, .4, .6, .7, .8, 1, 1]),             // Kenya
+      A(-27, -10, 32, 45, [.4, .4, .4, .5, .6, .8, 1, 1, 1, .7, .5, .4]),         // Mozambico
+      A(1, 8, 102, 106, [0, .1, .5, .7, .7, .8, .9, 1, 1, .9, .2, 0]),            // Malesia (Rompin)
+      A(-20, -14, 118, 128, [.2, .2, .3, .4, .7, .9, 1, 1, .9, .7, .5, .3]),      // Broome
+      A(-24, -20, 110, 118, [.5, .5, .5, .5, .5, .5, .6, .7, .9, 1, 1, .8]),      // Exmouth
+      A(-25, 35, -100, -10), A(-30, 30, 30, 180), A(-30, 30, -180, -77)
+    ],
+    wahoo: [
+      A(31, 33, -66, -63, [.3, .3, .4, .7, 1, .8, .8, .8, 1, 1, .7, .4]),         // Bermuda
+      A(10, 27, -85, -60, [1, 1, .9, .6, .4, .3, .3, .3, .4, .6, .9, 1]),         // Bahamas e Caraibi
+      A(18, 30, -118, -102, [.5, .4, .3, .3, .3, .4, .5, .7, .8, 1, 1, .9]),      // Cabo e Messico Pacifico
+      A(18, 23, -161, -154, [.4, .4, .5, .6, .9, 1, 1, 1, .9, .6, .5, .4]),       // Hawaii
+      A(-8, 5, 38, 52, [1, 1, .9, .7, .3, .3, .3, .4, .6, .8, .9, 1]),            // Kenya
+      A(-27, -10, 32, 45, [.6, .6, .6, .7, .8, .9, 1, 1, 1, .7, .6, .6]),         // Mozambico
+      A(-25, -10, 125, 155, [.8, .9, 1, 1, .8, .5, .4, .4, .5, .7, .8, .8]),      // Queensland e NT
+      A(-30, 32, -180, 180)
+    ],
+    lampuga: [
+      MED.concat([[0, 0, 0, 0, 0, .1, .3, .7, 1, 1, .7, .3]]),                    // Mediterraneo
+      A(24, 31, -83, -75, [.3, .3, .5, .8, 1, 1, 1, .8, .6, .5, .4, .3]),         // Florida
+      A(10, 24, -85, -60, [.8, .9, 1, 1, .9, .7, .5, .5, .5, .5, .6, .7]),        // Caraibi e Bahamas
+      A(8, 12, -88, -83, [1, .8, .6, .5, .6, .6, .6, .6, .6, .7, 1, 1]),          // Costa Rica Pacifico
+      A(18, 23, -161, -154, [.6, .8, 1, 1, .9, .5, .5, .7, .9, 1, .9, .7]),       // Hawaii
+      A(-27, 5, 32, 52, [.9, .9, 1, .8, .4, .3, .3, .3, .4, .6, .9, 1]),          // Africa orientale
+      A(-40, 45, -180, 180)
+    ],
+    tarpon: [
+      A(10, 13, -17, -13, [.7, .8, 1, 1, 1, .5, .3, .2, .2, .4, .7, .7]),         // Guinea-Bissau
+      A(-15, 18, -20, 14, [1, 1, 1, .9, .7, .5, .4, .4, .5, .7, .9, 1]),          // Gabon, Angola, Africa occ.
+      A(24, 35, -98, -75),                                                        // Florida e Golfo (stagione della specie)
+      A(8, 11.5, -84, -82, [.6, .7, .9, 1, 1, .8, .6, .7, 1, 1, .7, .5]),         // Costa Rica caraibica
+      A(15.8, 18.5, -89.3, -87.4, [.5, .5, .6, .8, .9, 1, 1, 1, .9, .6, .5, .5]), // Belize
+      A(18.5, 22, -92, -86, [.4, .4, .5, .6, .9, 1, 1, .9, .6, .4, .4, .4]),      // Yucatán
+      A(-25, 24, -98, -35, [.85, .85, .85, .85, .85, .85, .85, .85, .85, .85, .85, .85])
+    ],
+    dorado: [
+      A(-18, -10, -70, -60, [0, 0, 0, .1, .5, .9, 1, 1, 1, .9, .2, 0]),           // Bolivia (Tsimane), stagione secca
+      A(-35, -15, -66, -48, [.9, .9, 1, .8, .5, .3, .3, .5, .8, 1, 1, .9])        // bacino del Plata
+    ],
+    tigre: [
+      A(-20, -18, 21.5, 24, [.4, .3, .3, .3, .4, .5, .6, .8, 1, 1, 1, .8]),       // Okavango
+      A(-18, -13, 22, 26, [.2, .2, .2, .4, .7, .9, .9, 1, 1, .9, .6, .3]),        // Alto Zambesi
+      A(-11, -6, 33, 40, [.1, .1, .1, .1, .2, .3, .5, .8, 1, 1, .8, .2]),         // Tanzania
+      A(-22, -8, 20, 40, [.4, .3, .3, .5, .6, .6, .6, .8, 1, 1, 1, .7])           // Kariba e basso Zambesi
+    ],
+    mahseer: [
+      A(20, 32, 72, 95, [.2, .5, .9, 1, .9, .4, .1, .1, .5, 1, .9, .4]),          // Himalaya
+      A(10, 14, 75, 78, [1, 1, 1, .7, .5, .2, .1, .1, .2, .4, .7, .9])            // Cauvery
+    ],
+    // salmone atlantico: mesi in cui i pesci sono davvero nel fiume (non le chiusure di legge)
+    salmone: [
+      A(66, 70, 30, 42, [0, 0, 0, 0, .4, 1, .9, .6, .9, .4, 0, 0]),               // Kola
+      A(57, 71, 4, 42, [0, 0, 0, 0, .1, .9, 1, .8, .5, .3, 0, 0]),                // Norvegia, Svezia, Finlandia
+      A(63, 67, -25, -13, [0, 0, 0, 0, 0, .5, 1, 1, .6, .3, 0, 0]),               // Islanda
+      A(51, 59, -11, -1, [.2, .4, .6, .8, .9, .9, .9, .7, 1, .9, .4, .1]),        // Scozia e Irlanda
+      A(43, 60, -80, -52, [0, 0, 0, 0, .2, .9, 1, .7, .9, .6, .1, 0]),            // Canada orientale
+      A(42, 49, -9, -1)                                                           // Spagna nord e Francia (stagione della specie)
+    ],
+    salmonepac: [
+      A(42, 49, -125, -116, [0, .1, .4, .7, .7, .5, .5, .8, 1, 1, .6, .1]),       // Columbia (Washington, Oregon)
+      A(41, 49, -93, -75, [0, 0, 0, .1, .1, .1, .2, .5, 1, 1, .6, .1]),           // Grandi Laghi
+      A(37, 71, -170, -120), A(41, 66, 135, 180), A(-55, -38, -76, -65), A(-46, -42, 169, 174)
+    ],
+    // Adriatico: tonni e serra hanno una stagione propria
+    tonno: [{ fn: ADRIATICO, s: [.25, .2, .25, .4, .55, .6, .7, .85, 1, 1, .8, .45] }, A(20, 65, -80, 42), A(20, 50, 120, 180), A(20, 50, -180, -110), A(-50, -30, 10, 180)],
+    serra: [{ fn: ADRIATICO, s: [0, 0, 0, .1, .2, .4, .6, .8, 1, 1, .8, .2] }, A(25, 47, -82, -60), A(-40, -15, -60, -35), A(8, 46, -20, 42), A(-36, -15, 10, 35), A(-40, -22, 110, 155)]
   });
   function rangeBox(spId, lat, lon) {
     var r = RANGES[spId]; if (!r) return null;
-    for (var i = 0; i < r.length; i++) if (lat >= r[i][0] && lat <= r[i][1] && lon >= r[i][2] && lon <= r[i][3]) return r[i];
+    for (var i = 0; i < r.length; i++) {
+      if (r[i].fn) { if (r[i].fn(lat, lon)) return [0, 0, 0, 0, r[i].s]; continue; }
+      if (lat >= r[i][0] && lat <= r[i][1] && lon >= r[i][2] && lon <= r[i][3]) return r[i];
+    }
     return null;
   }
   // attività del mese: stagione regionale se c'è (mesi veri), altrimenti tabella della specie (girata a sud)
@@ -624,8 +715,7 @@ var PescaEngine = (function () {
   }
   function inRange(spId, lat, lon) {
     var r = RANGES[spId]; if (!r) return true;
-    for (var i = 0; i < r.length; i++) if (lat >= r[i][0] && lat <= r[i][1] && lon >= r[i][2] && lon <= r[i][3]) return true;
-    return false;
+    return !!rangeBox(spId, lat, lon);
   }
   // stagioni: le tabelle sono scritte per l'emisfero nord; a sud si spostano di 6 mesi
   function seasonMonth(lat, m) { return lat < 0 ? (m + 6) % 12 : m; }
@@ -643,13 +733,13 @@ var PescaEngine = (function () {
   ];
 
   var EXTRA_M = {
-    spinning: { smallmouth: 1, grongo: .05, cavedano: .8, ricciola: .7, dentice: .3, sarago: .2, lampuga: .8, barracuda: 1, lucioperca: 1, temolo: .4, muskie: 1, walleye: .9, salmone: .8, salmonepac: .9, striper: 1, redfish: 1, tarpon: .8, bonefish: .7, permit: .8, snook: 1, vela: .3, wahoo: .4, pinnagialla: .8, sgombroreale: .9, dorado: 1, tigre: 1, nilo: .9, arapaima: .6, mahseer: 1, murraycod: 1 },
+    spinning: { akame: 1, suzuki: 1, smallmouth: 1, grongo: .05, cavedano: .8, ricciola: .7, dentice: .3, sarago: .2, lampuga: .8, barracuda: 1, lucioperca: 1, temolo: .4, muskie: 1, walleye: .9, salmone: .8, salmonepac: .9, striper: 1, redfish: 1, tarpon: .8, bonefish: .7, permit: .8, snook: 1, vela: .3, wahoo: .4, pinnagialla: .8, sgombroreale: .9, dorado: 1, tigre: 1, nilo: .9, arapaima: .6, mahseer: 1, murraycod: 1 },
     surfcasting: { grongo: .6, smallmouth: .1, sarago: .8, striper: .9, redfish: .7, snook: .3, dentice: .1, ricciola: .1, barracuda: .2, bonefish: .2, permit: .2 },
-    bolognese: { smallmouth: .4, grongo: .3, cavedano: 1, sarago: 1, lucioperca: .4, temolo: .4, walleye: .6, salmonepac: .5, striper: .4, redfish: .6, tarpon: .5, snook: .5, barracuda: .2, ricciola: .2, dentice: .1 },
-    fondo: { smallmouth: .4, grongo: 1, cavedano: .6, sarago: .8, dentice: .3, lucioperca: .6, walleye: .6, striper: .6, redfish: .8, tarpon: .5, bonefish: .4, permit: .5, snook: .5, dorado: .4, tigre: .5, nilo: .6, arapaima: .8, mahseer: .8, murraycod: .8, muskie: .1 },
-    traina: { smallmouth: .5, ricciola: 1, dentice: 1, lampuga: 1, barracuda: .9, lucioperca: .5, muskie: .9, walleye: .8, salmone: .3, salmonepac: 1, striper: .9, tarpon: .5, snook: .3, vela: 1, wahoo: 1, pinnagialla: 1, sgombroreale: 1, dorado: .7, tigre: .8, nilo: 1, murraycod: .6 },
+    bolognese: { suzuki: .5, smallmouth: .4, grongo: .3, cavedano: 1, sarago: 1, lucioperca: .4, temolo: .4, walleye: .6, salmonepac: .5, striper: .4, redfish: .6, tarpon: .5, snook: .5, barracuda: .2, ricciola: .2, dentice: .1 },
+    fondo: { akame: .6, suzuki: .4, smallmouth: .4, grongo: 1, cavedano: .6, sarago: .8, dentice: .3, lucioperca: .6, walleye: .6, striper: .6, redfish: .8, tarpon: .5, bonefish: .4, permit: .5, snook: .5, dorado: .4, tigre: .5, nilo: .6, arapaima: .8, mahseer: .8, murraycod: .8, muskie: .1 },
+    traina: { akame: .3, suzuki: .5, smallmouth: .5, ricciola: 1, dentice: 1, lampuga: 1, barracuda: .9, lucioperca: .5, muskie: .9, walleye: .8, salmone: .3, salmonepac: 1, striper: .9, tarpon: .5, snook: .3, vela: 1, wahoo: 1, pinnagialla: 1, sgombroreale: 1, dorado: .7, tigre: .8, nilo: 1, murraycod: .6 },
     drifting: { ricciola: .7, dentice: .6, lampuga: .3, vela: .4, wahoo: .3, pinnagialla: .9, sgombroreale: .5 },
-    mosca: { smallmouth: .8, cavedano: 1, lampuga: .3, barracuda: .3, temolo: 1, muskie: .3, salmone: 1, salmonepac: .7, striper: .6, redfish: .8, tarpon: 1, bonefish: 1, permit: .9, snook: .8, dorado: .8, tigre: .7, arapaima: .5, mahseer: .4 }
+    mosca: { suzuki: .4, smallmouth: .8, cavedano: 1, lampuga: .3, barracuda: .3, temolo: 1, muskie: .3, salmone: 1, salmonepac: .7, striper: .6, redfish: .8, tarpon: 1, bonefish: 1, permit: .9, snook: .8, dorado: .8, tigre: .7, arapaima: .5, mahseer: .4 }
   };
   TYPES.forEach(function (t) { var x = EXTRA_M[t.id]; if (x) for (var k in x) t.m[k] = x[k]; });
 
@@ -944,14 +1034,25 @@ var PescaEngine = (function () {
   var SPOT = 'shore';
   function setSpot(s) { SPOT = s === 'boat' ? 'boat' : 'shore'; }
   // da riva: quanto è realistico prendere la specie (Alto Adriatico, fondali bassi)
-  var SHORE = { tonno: 0.08, alletterato: 0.45, leccia: 0.8, calamaro: 0.8, ricciola: .3, dentice: .2, lampuga: .05, vela: .01, wahoo: .01, pinnagialla: .02, sgombroreale: .3, barracuda: .7, gt: .6 };
+  var SHORE = { tonno: 0.02, alletterato: 0.45, leccia: 0.8, calamaro: 0.8, ricciola: .3, dentice: .2, lampuga: .05, vela: .01, wahoo: .01, pinnagialla: .02, sgombroreale: .3, barracuda: .7, gt: .6 };
   var BOAT = { tonno: 1, alletterato: 1, leccia: 1, serra: 1, sgombro: 1, ricciola: 1, dentice: 1, lampuga: 1, vela: 1, wahoo: 1, pinnagialla: 1, sgombroreale: 1 };
 
   // Presenza locale: quanto la specie frequenta davvero la zona (1 = normale)
+  // p = presenza (0 assente, 0.15 rara, 0.5 ogni tanto, 1 normale, 1.3 abbondante)
+  // shore = quanto è realistico da riva in quella zona (prende il posto del valore generale)
+  // Fonti e motivazioni: FONTI.md (ricerca punto 3, novembre 2026)
+  var SHALLOW = { alletterato: 0.05, ricciola: 0.02, dentice: 0.02, lampuga: 0.01 };
   var ZONES = [
-    { name: 'Alto Adriatico orientale', test: function (la, lo) { return la >= 45.35 && lo >= 12.55 && lo < 14.2; }, p: { tonno: 0.12, alletterato: 0.05, leccia: 0.5 } },
-    { name: 'Laguna veneta e Chioggia', test: function (la, lo) { return la >= 44.8 && la < 45.7 && lo >= 11.9 && lo < 12.55; }, p: { tonno: 1, alletterato: 0.3, leccia: 0.6 } },
-    { name: 'Romagna e Marche', test: function (la, lo) { return la >= 43.0 && la < 44.8 && lo >= 12.0 && lo < 14.2; }, p: { tonno: 1, alletterato: 0.45 } }
+    { name: 'Alto Adriatico orientale', test: function (la, lo) { return la >= 45.35 && lo >= 12.55 && lo < 14.2; },
+      p: { tonno: 0.15, alletterato: 0.05, leccia: 0.5, ricciola: 0.15, lampuga: 0.15, dentice: 0.15, serra: 0.5, barracuda: 0.15 }, shore: SHALLOW },
+    { name: 'Laguna veneta e Chioggia', test: function (la, lo) { return la >= 44.8 && la < 45.7 && lo >= 11.9 && lo < 12.55; },
+      p: { tonno: 1, alletterato: 0.5, leccia: 1, ricciola: 0.15, lampuga: 0.15, dentice: 0.15, barracuda: 0.15 }, shore: SHALLOW },
+    { name: 'Romagna e Marche', test: function (la, lo) { return la >= 43.0 && la < 44.8 && lo >= 12.0 && lo < 14.2; },
+      p: { tonno: 1, alletterato: 0.5, ricciola: 0.5, lampuga: 0.5, dentice: 0.15, barracuda: 0.15 }, shore: SHALLOW },
+    { name: 'Abruzzo, Molise e Puglia adriatica', test: function (la, lo) { return la < 43 && ADRIATICO(la, lo) && lo < 19; },
+      p: { barracuda: 0.5 } },
+    { name: 'Sicilia', test: function (la, lo) { return la >= 36.5 && la < 38.4 && lo >= 12.2 && lo < 15.7; }, p: { lampuga: 1.3 } },
+    { name: 'Sardegna', test: function (la, lo) { return la >= 38.8 && la < 41.3 && lo >= 8 && lo < 9.9; }, p: { lampuga: 1.3 } }
   ];
   // Correzioni dell'utente: { chiaveZona: { specie: valore } } — vincono sulle stime
   var USER_PRES = {};
@@ -983,7 +1084,10 @@ var PescaEngine = (function () {
     // riva o barca
     if (SPOT === 'shore') {
       if (ty.id === 'traina' || ty.id === 'drifting') { mult *= 0.05; why.push(['-', 'Questa tecnica si fa in barca']); }
-      else if (SHORE[sp.id] != null) { mult *= SHORE[sp.id]; if (SHORE[sp.id] < 0.5) why.push(['-', 'Da riva è raro: meglio in barca']); }
+      else {
+        var zz = zoneOf(d.lat, d.lon).z, shF = zz && zz.shore && zz.shore[sp.id] != null ? zz.shore[sp.id] : SHORE[sp.id];
+        if (shF != null) { mult *= shF; if (shF < 0.5) why.push(['-', zz && zz.shore && zz.shore[sp.id] != null ? 'Qui il fondale è basso: da riva quasi impossibile, serve la barca' : 'Da riva è raro: meglio in barca']); }
+      }
     } else if (env === 'sea') {
       if (ty.id === 'surfcasting') { mult *= 0.1; why.push(['-', 'Il surfcasting si fa da riva']); }
       if (BOAT[sp.id]) why.push(['+', 'In barca raggiungi i branchi al largo']);
@@ -999,7 +1103,7 @@ var PescaEngine = (function () {
     }
 
     // pesci di mare che risalgono i fiumi: lontano dalla costa (nessun dato marino) si vedono poco
-    if (env === 'fresh' && !d.marine && (sp.id === 'cefalo' || sp.id === 'barramundi')) { mult *= 0.25; why.push(['-', 'Lontano dal mare: risale poco i fiumi']); }
+    if (env === 'fresh' && !d.marine && /^(cefalo|barramundi|akame|suzuki|tarpon|snook|redfish)$/.test(sp.id)) { mult *= 0.25; why.push(['-', 'Lontano dal mare: risale poco i fiumi']); }
 
     var season = seasonAt(sp, d.lat, d.lon, month);
     if (season >= 0.85) why.push(['+', 'Piena stagione']); else if (season < 0.35) why.push(['-', 'Fuori stagione']);
@@ -1142,7 +1246,7 @@ var PescaEngine = (function () {
 <script>
 (function () {
   'use strict';
-  var APP_NAME = 'Pescomante', APP_VERSION = '15', APP_DATE = '2026-11-16';
+  var APP_NAME = 'Pescomante', APP_VERSION = '19', APP_DATE = '2026-11-16';
   var E = PescaEngine, H = E.H, D = E.D;
   var $ = function (id) { return document.getElementById(id); };
   var GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
@@ -1532,7 +1636,7 @@ var PescaEngine = (function () {
   function drawGlobe() {
     var cv = $('globe'); if (!cv) return;
     var g = cv.getContext('2d'), N = cv.width, img = g.createImageData(N, N), px = img.data;
-    var sea = hexRgb(T.t1 || '#0a246a'), land = hexRgb(T.t2 || '#a6caf0'), bg = hexRgb(T.field || '#fff'), grid = hexRgb(T.dk || '#404040');
+    var sea = hexRgb(T.t2 || '#a6caf0'), land = hexRgb(T.t1 || '#0a246a'), bg = hexRgb(T.field || '#fff'), grid = hexRgb(T.dk || '#404040');
     var R = (N / 2 - 2) * G.zoom, p0 = G.lat * Math.PI / 180, l0 = G.lon * Math.PI / 180, sp0 = Math.sin(p0), cp0 = Math.cos(p0);
     for (var y = 0; y < N; y++) for (var x = 0; x < N; x++) {
       var o = (y * N + x) * 4, nx = (x + 0.5 - N / 2) / R, ny = -(y + 0.5 - N / 2) / R, rho = Math.sqrt(nx * nx + ny * ny), col;
