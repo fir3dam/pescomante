@@ -94,6 +94,18 @@ body {
   .mgrid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
   .g-top, .g-sp { grid-column: 1 / -1; }
 }
+.sidebox { display: grid; gap: 6px; }
+.bathythumb { position: relative; padding: 3px; cursor: pointer; border: 0; overflow: hidden; }
+.bathythumb img { width: 100%; height: 100%; object-fit: cover; display: block; image-rendering: auto; background: var(--field); }
+.bathythumb span { position: absolute; left: 3px; right: 3px; bottom: 3px; font-size: 10px; font-weight: bold; background: rgba(0,0,0,.55); color: #fff; text-align: center; }
+.bathythumb .bdot { position: absolute; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; background: #e00000; box-shadow: 0 0 0 1px #fff; }
+.where { padding: 6px 8px; display: grid; gap: 3px; font-size: 12px; }
+.where b { font-weight: bold; }
+.bathywin { max-width: 760px !important; width: 100%; }
+#bmap { height: min(62vh, 560px); width: 100%; background: var(--field); }
+.binfo { padding: 6px 8px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-variant-numeric: tabular-nums; }
+.isolbl { background: rgba(255,255,255,.85); color: #0b2a5a; font: bold 10px/1 Tahoma, Verdana, sans-serif; padding: 1px 3px; border: 1px solid #0b2a5a; white-space: nowrap; }
+.binfo .btn { min-height: 24px; padding: 2px 10px; }
 .radarbtns .btn { min-height: 24px; padding: 2px 10px; font-size: 11px; }
 .radarbox { height: 440px; position: relative; padding: 2px; }
 .radarbox iframe { width: 100%; height: 100%; border: 0; display: block; }
@@ -334,7 +346,10 @@ canvas.chart { width: 100%; display: block; }
                 <label class="lbl"><span><u>P</u>ostazione</span><select class="field sunken" id="spot"><option value="shore">Da riva</option><option value="boat">In barca</option></select></label>
               </div>
             </div>
-            <div class="globebox sunken" title="Il posto scelto sul mappamondo"><canvas id="globe" width="88" height="88" aria-label="Mappamondo con il posto scelto"></canvas></div>
+            <div class="sidebox">
+              <div class="globebox sunken" title="Il posto scelto sul mappamondo"><canvas id="globe" width="88" height="88" aria-label="Mappamondo con il posto scelto"></canvas></div>
+              <button class="globebox sunken bathythumb" id="bathyThumb" title="Apri la mappa dei fondali"><img id="bathyImg" alt=""><i class="bdot"></i><span>Fondali</span></button>
+            </div>
           </div>
         </fieldset>
 
@@ -367,6 +382,7 @@ canvas.chart { width: 100%; display: block; }
           <div class="prog"><i id="vBar" style="width:0"></i></div>
           <div id="vWhen" class="muted">&nbsp;</div>
           <ul class="why" id="vWhy"></ul>
+          <div class="where sunken" id="vWhere" hidden></div>
         </fieldset>
 
         <fieldset class="grp g-day"><legend id="dayTitle">Andamento della giornata</legend>
@@ -449,6 +465,17 @@ canvas.chart { width: 100%; display: block; }
         <div class="listbox sunken" id="welRes" hidden></div>
         <div class="row2" style="margin-top:8px"><button class="btn raised" id="welBack">&laquo; Indietro</button><span class="muted" id="welMsg"></span></div>
       </div>
+    </div>
+  </section>
+</div>
+<div class="modal" id="bathyDlg" hidden>
+  <section class="win raised bathywin" role="dialog" aria-modal="true" aria-labelledby="bathyTitle">
+    <div class="title"><svg class="ico"><use href="#logo"/></svg><span id="bathyTitle">Fondali</span><button class="tbtn raised" id="bathyClose" aria-label="Chiudi">&times;</button></div>
+    <div class="body">
+      <div class="sunken" style="padding:2px"><div id="bmap"></div></div>
+      <div class="row" style="align-items:center"><button class="btn raised" id="bIso"><b>Batimetriche dettagliate</b></button><span class="muted" id="bStat">Disegna le linee di profondità con i metri nella zona che vedi.</span></div>
+      <div class="binfo sunken" id="bInfo">Tocca la mappa per fissare un punto: ti dico coordinate e profondità.</div>
+      <div class="muted" style="font-size:11px" id="bSrc"></div>
     </div>
   </section>
 </div>
@@ -604,6 +631,9 @@ var PescaEngine = (function () {
     { id: 'ausbass', name: 'Australian bass', hab: 'both', season: [0.7,0.6,0.5,0.3,0.2,0.2,0.2,0.4,0.8,1,1,0.9], temp: [10,18,24,28], light: [1,0.6,1,0.7], tide: 0.3, wave: [0,0,0.6,1.2], moon: null },
     { id: 'goldenperch', name: 'Golden perch (yellowbelly)', hab: 'fresh', season: [0.8,0.7,0.5,0.3,0.2,0.1,0.2,0.4,0.8,1,1,0.9], temp: [12,18,25,30], light: [0.9,0.7,1,0.6], tide: 0, wave: null, moon: null },
     { id: 'kahawai', name: 'Kahawai (Australian salmon)', hab: 'sea', season: [0.5,0.4,0.5,0.8,1,1,1,0.9,0.8,0.7,0.6,0.5], temp: [10,14,19,23], light: [1,0.9,1,0.2], tide: 0.5, wave: [0,0.2,1.2,2], moon: null },
+    { id: 'coregone', name: 'Coregone (lavarello, bondella)', hab: 'fresh', season: [.4,.7,.9,1,1,.9,.8,.7,.8,.7,.5,.3], temp: [4,9,16,20], light: [1,.7,.9,.1], tide: 0, wave: null, moon: null },
+    { id: 'carassio', name: 'Carassio', hab: 'fresh', season: [.1,.2,.5,.8,1,1,.9,.9,.8,.6,.3,.1], temp: [8,18,26,32], light: [1,.8,1,.6], tide: 0, wave: null, moon: null },
+    { id: 'scardola', name: 'Scardola', hab: 'fresh', season: [.2,.3,.6,.9,1,1,.9,.9,.8,.6,.3,.2], temp: [7,16,24,29], light: [.9,.8,1,.3], tide: 0, wave: null, moon: null },
     { id: 'murraycod', name: 'Murray cod', hab: 'fresh', season: [.7,.7,.7,.7,.7,.7,.7,.7,.7,.7,.7,.7], temp: [10,16,26,30], light: [0.9,0.4,1,0.8], tide: 0, wave: null, moon: null }
   ];
 
@@ -754,10 +784,64 @@ var PescaEngine = (function () {
   });
   // Areali verificati (ricerca punto 1 e specie nuove, novembre 2026): vedi FONTI.md
   Object.assign(RANGES, {"branzino":[[25,63,-25,42]],"orata":[[14,56,-18,36]],"leccia":[[-35,45,-18,36]],"alletterato":[[-35,45,-98,36]],"anguilla":[[36,68,-10,25],[31,46.5,-5.5,41],[10,53,-98,-52],[22,43,118,145],[-47,-27,140,178],[-35,5,25,60]],"trota":[[37,70,-10,40],[35,50,-115,-70],[-54,-38,-73,-65],[-47,-35,145,178],[34,62,-165,-115],[51,60,155,163],[-54,-15,-75,-65],[31,45,129,146],[27,36,72,92],[-34.5,-25,18,31]],"luccio":[[41.5,69,-5,45],[50,71,45,160],[40,69,-160,-65]],"persico":[[41,69,-5,45],[48,69,45,155],[-46,-33,138,177],[36,58,-115,-62]],"bass":[[25,48,-102,-72],[36.5,48,-9,18],[31,40,130,141],[-34.5,-23,18,32],[14,33,-118,-86],[19,24,-85,-74]],"carpa":[[36,60,-9,60],[22,48,100,144],[26,52,-124,-68],[-38,-25,138,152],[-34.5,-22,18,32],[-56,-20,-75,-40],[-47,-34,166,179]],"siluro":[[42,59,6,52],[40.5,48.5,-1.5,14]],"snakehead":[[24,49,105,135],[34,42,-93,-73],[-7,26,74,115],[25.2,27,-81,-80]],"peacock":[[-15,9,-76,-48],[-25,-16,-55,-42],[25.4,26.8,-80.6,-80],[8.8,9.4,-80.1,-79.5],[1.2,5.5,100.5,104],[17.5,18.7,-67.5,-65],[18,23,-161,-154]],"barramundi":[[-24,-10.5,121,152],[-10,22,92,148],[7,23,68,92]],"ayu":[[31,43,130,145],[23,41,118,130]],"gt":[[-28,28,32,76],[-25,31,95,175],[18.5,28.5,-178,-154]],"hucho":[[46.2,51,12.5,30],[44,46.2,13.6,30],[46,68,55,140]],"ricciola":[[30.5,45.8,-5.5,36],[-34,47,-28,18],[-25,43,-97,-35],[-28,38,34,179]],"dentice":[[30.5,45.8,-5.5,36],[14,43,-18.5,-6]],"sarago":[[30.5,45.8,-5.5,36],[-34,46,-28,18]],"lucioperca":[[43,64,10,55],[40.5,53,-2,14]],"temolo":[[44.5,69,-4,58],[45,71,60,180],[45,71,-168,-95]],"muskie":[[36,50,-96,-73]],"walleye":[[34,65,-125,-68]],"striper":[[29,49,-90,-64],[34,47,-125,-118],[30,41,-100,-76]],"redfish":[[21,41,-98,-71]],"permit":[[-24,38,-97,-35]],"nilo":[[-4,31,-16,38],[-3,2,31.5,34.8]],"smallmouth":[[34,49,-96,-71],[36,49,-124,-110],[-35,-30,18,24],[33,44,135,146]],"grongo":[[30.5,45.8,-5.5,36],[14,62,-28,10]],"cavedano":[[42,62,-4,50],[40,46.5,7,18]],"akame":[[31,34.5,131,137]],"suzuki":[[31,43,129.5,145],[25,41,118,130]],"murraycod":[[-37.5,-25,139,151.5,[1,1,0.9,0.8,0.6,0.5,0.5,0.6,0.7,0.8,0.9,0.9]]],"traira":[[-35,-25,-65,-50,[0.9,0.9,0.7,0.4,0.2,0.1,0.1,0.2,0.6,1,0.8,0.9]],[-35,11,-85,-35]],"codarossa":[[-15,8,-78,-50,[0.5,0.4,0.3,0.3,0.5,0.8,1,1,0.9,0.8,0.7,0.6]]],"cernia":[[30,45.8,-10,36],[-34.8,15,-18,32,[1,1,0.9,0.7,0.4,0.2,0.2,0.2,0.3,0.5,0.7,0.9]],[-38,-20,-58,-39,[1,1,0.9,0.7,0.4,0.2,0.2,0.2,0.3,0.5,0.7,0.9]],[-26.5,-23,32.5,47,[1,1,0.9,0.7,0.4,0.2,0.2,0.2,0.3,0.5,0.7,0.9]]],"sanpietro":[[-47,-15,112,179,[0.7,0.6,0.8,0.9,0.6,0.4,0.4,0.4,0.6,0.8,1,0.9]],[-35,62,-18,36],[10,42,105,145]],"palamita":[[30,47,-6,42],[-35,60,-18,20],[-42,45,-82,-35]],"barbo":[[41.5,55,-5,29],[42,46.5,7,15.5]],"tinca":[[36,62,-9,90],[35,50,-123,-70],[-46,-28,115,178],[-34.5,-25,18,31]],"persicosole":[[32,50,-100,-64],[37,54,-9,32]],"spada":[[30,45.5,-6,36],[-23,23,-180,180,[0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8]],[-45,50,-180,180]],"merluzzo":[[66,80,5,65,[0.8,1,1,0.9,0.6,0.5,0.6,0.6,0.7,0.7,0.7,0.8]],[35,62,-76,-45,[0.6,0.5,0.6,0.8,0.9,1,0.9,0.8,0.9,1,0.8,0.7]],[62,68,-44,-12],[45,80,-12,65]],"carbonaro":[[35,64,-76,-45],[44,81,-25,35]],"halibut":[[36,68,-77,-45],[62,68.5,-44,-12],[44,79,-12,55]],"salmerino":[[45.4,46.5,8.4,10.95,[.3,.3,.6,.9,1,.8,.6,.6,.8,.7,.3,.2]],[46,48.5,5.5,16,[0.3,0.3,0.6,0.9,1,0.8,0.6,0.6,0.8,0.7,0.3,0.2]],[41,55,-76,-52],[55,82,-180,180]],"pescegatto":[[25,55,-124,-67],[37,52,-8,26]],"crappie":[[25,50,-123,-68]],"bluegill":[[25,50,-124,-68],[31,41,130,141],[-34.5,-24,18,32,[0.9,0.8,0.7,0.5,0.3,0.2,0.2,0.2,0.4,0.7,1,1]]],"cobia":[[24,42,-98,-70],[-15,24,-98,-34,[0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8]],[-38,-15,-60,-34,[0.9,0.8,0.7,0.5,0.3,0.2,0.2,0.3,0.5,0.8,1,0.9]],[-35,35,-18,20],[-20,24,30,155,[0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8,0.8]],[-36,42,30,155]],"marlin":[[-15,15,-180,180,[0.7,0.8,0.9,0.9,0.8,0.7,0.7,0.7,0.8,0.9,0.9,0.8]],[-30,38,-98,-6],[-30,30,-20,15],[-35,35,32,180],[-35,35,-180,-75]],"roosterfish":[[18,33,-119,-100,[0.3,0.3,0.4,0.6,0.8,1,1,0.9,0.9,0.7,0.5,0.3]],[-18,18,-100,-70,[1,1,1,0.9,0.7,0.6,0.6,0.6,0.6,0.7,0.8,0.9]]],"surubi":[[-35,-10,-65,-40,[0.6,0.8,1,1,0.8,0.4,0.3,0.4,0.7,0.9,0.8,0.6]],[-25,9,-78,-50]],"tambaqui":[[2,10,-72,-60,[0.4,0.4,0.5,0.7,0.9,1,1,0.9,0.8,0.8,0.6,0.5]],[-18,10,-76,-48]],"payara":[[2,9,-75,-56,[1,1,1,0.8,0.4,0.2,0.2,0.3,0.4,0.6,0.8,0.9]],[-16,2,-76,-48]],"cubera":[[5,35,-98,-34],[-26,5,-60,-34,[0.9,0.8,0.6,0.5,0.4,0.4,0.5,0.6,0.7,0.8,0.9,1]]],"kob":[[-34.8,-25,18,36,[0.9,0.8,0.6,0.4,0.3,0.2,0.2,0.3,0.6,0.9,1,1]],[-35,-20,113,154,[0.9,0.8,0.6,0.4,0.3,0.2,0.2,0.3,0.6,0.9,1,1]],[15,25,65,75],[20,40,110,140]],"yellowfish":[[-31.5,-24,16.5,30,[0.9,0.8,0.6,0.3,0.2,0.1,0.1,0.2,0.5,0.8,1,1]]],"galjoen":[[-34.8,-18.5,14.5,32.5,[0.4,0.4,0.5,0.7,0.9,1,1,0.9,0.8,0.6,0.5,0.4]]],"kurodai":[[20,43,107,143]],"aoriika":[[31,37,28,36],[-35,40,32,170]],"hiramasa":[[30,45,125,146],[22,40,-125,-108],[-50,-15,-180,180,[1,1,0.9,0.7,0.4,0.2,0.2,0.3,0.6,0.9,1,1]]],"mebaru":[[30,45,125,146]],"snapperau":[[-39,-28,140,153,[0.7,0.6,0.4,0.3,0.3,0.4,0.5,0.7,0.9,1,1,0.9]],[-35,-23,113,118,[0.7,0.6,0.4,0.3,0.3,0.4,0.5,0.7,0.9,1,1,0.9]],[-47,-34,166,179,[1,1,0.9,0.6,0.4,0.3,0.3,0.3,0.4,0.6,0.8,1]]],"flathead":[[-38.5,-16,145,153.5,[0.9,0.8,0.6,0.4,0.3,0.2,0.2,0.3,0.8,1,1,0.9]]],"ausbass":[[-38.5,-25,149,153.5,[0.7,0.6,0.5,0.3,0.2,0.2,0.2,0.4,0.8,1,1,0.9]]],"goldenperch":[[-38,-26,141,151,[0.8,0.7,0.5,0.3,0.2,0.1,0.2,0.4,0.8,1,1,0.9]]],"kahawai":[[-44,-28,113,154,[0.5,0.4,0.5,0.8,1,1,1,0.9,0.8,0.7,0.6,0.5]],[-47,-34,166,179,[0.8,0.7,0.6,0.7,0.9,1,1,0.9,0.8,0.8,0.7,0.8]]]});
+  RANGES.coregone = [
+    [42.53, 42.68, 11.86, 12.04, [.6,.8,1,1,.9,.8,.7,.6,.8,.8,.6,.5]], [42.07, 42.17, 12.16, 12.3, [.6,.8,1,1,.9,.8,.7,.6,.8,.8,.6,.5]], [42.3, 42.34, 12.15, 12.2, [.6,.8,1,1,.9,.8,.7,.6,.8,.8,.6,.5]], [42.2, 42.3, 12.9, 13.12, [.6,.8,1,1,.9,.8,.7,.6,.8,.8,.6,.5]], [42.5, 42.56, 13.25, 13.4, [.6,.8,1,1,.9,.8,.7,.6,.8,.8,.6,.5]],
+    [45.43, 45.9, 10.5, 10.88], [45.72, 46.18, 8.5, 8.85], [45.8, 46.18, 9.07, 9.45], [45.65, 45.9, 9.97, 10.13], [45.9, 46.06, 8.85, 9.15],
+    [45.73, 45.8, 10.48, 10.53], [45.78, 45.9, 8.38, 8.42], [45.4, 45.43, 8.03, 8.07], [45.87, 45.89, 10.74, 10.77], [46.0, 46.03, 11.22, 11.27], [45.85, 45.92, 8.6, 8.66], [46.09, 46.13, 12.31, 12.36],
+    [46.3, 70, 5, 35]
+  ];
+  var CS_SOUTH = [.3, .4, .7, .9, 1, 1, .9, .9, .9, .7, .4, .3];
+  RANGES.carassio = [[36, 43.5, 7, 19, CS_SOUTH], [36, 65, -9, 140]];
+  RANGES.scardola = [[37.5, 43.5, 7, 18, [.3, .5, .8, 1, 1, .9, .8, .8, .9, .7, .4, .3]], [37.5, 46.5, 7, 18], [42, 63, -5, 58]];
   RANGES.tigre.push([-26, 12, 12, 36]);
   RANGES.arapaima.push([-15, -10, -68, -64, [.3, .2, .2, .2, .3, .5, .7, .9, 1, 1, .9, .6]]);
   RANGES.mahseer.unshift([24, 35, 70, 96, [.2, .5, .9, 1, .9, .4, .1, .1, .5, 1, .9, .4]], [9, 21, 73, 82, [1, 1, 1, .7, .5, .2, .1, .1, .2, .4, .7, .9]]);
   RANGES.barracuda = [RANGES.barracuda[0], [14, 44.5, -28, 36], [-24, 40, -97, -35], [-28, 32, 32, 179]];
+  // ---------- Fondali: zone italiane (dove si pesca da barca e da riva) e laghi ----------
+  var DEPTH_IT_RAW = {"trieste":"Golfo di Trieste|tonno 18-25 - 9-11;alletterato 15-24 - 9-11;palamita 12-24 4-10 9-12;ricciola 15-24 - 8-10;dentice 14-24 - 5-10;sanpietro 18-25 - 10-4;lampuga 15-24 - 8-10;leccia 3-15 2-8 5-10;serra 2-12 1-6 5-11;branzino 2-15 1-6 10-3;orata 3-18 2-8 4-11;sarago 2-15 1-6 9-5;calamaro 10-24 4-10 10-2;seppia 3-18 2-6 3-5/9-11;sgombro 15-24 5-10 5-10;sugarello 12-24 4-10 5-11;grongo 8-24 3-10 10-4;barracuda 4-15 2-8 9-12","lignano":"Lignano, Grado e Caorle|tonno 22-35 - 8-11;alletterato 18-32 - 9-11;palamita 12-28 3-8 9-12;ricciola 18-30 - 8-10;dentice 18-30 - 5-10;sanpietro 22-35 - 11-4;lampuga 20-35 - 8-10;leccia 2-12 1-5 5-10;serra 2-10 1-4 5-11;branzino 2-15 1-5 10-3;orata 3-20 2-6 4-11;sarago 4-20 2-6 9-5;calamaro 12-26 3-7 10-2;seppia 3-16 1-5 3-5/9-11;sgombro 15-30 3-7 5-10;sugarello 12-28 3-7 5-11;grongo 10-28 3-7 10-4;barracuda 3-15 2-6 9-12","venezia":"Laguna di Venezia e Chioggia|tonno 22-38 - 8-11;alletterato 20-35 - 9-11;palamita 12-28 4-10 9-12;ricciola 18-30 - 8-10;dentice 16-28 - 5-10;sanpietro 20-32 - 11-4;lampuga 20-35 - 8-10;leccia 2-14 2-8 5-10;serra 2-12 1-6 5-11;branzino 2-18 1-8 10-3;orata 2-20 2-8 4-11;sarago 3-20 2-8 9-5;calamaro 10-25 4-10 10-2;seppia 2-16 1-6 3-5/9-11;sgombro 15-30 4-10 5-10;sugarello 10-26 4-10 5-11;grongo 8-25 3-10 10-4;barracuda 4-16 3-8 9-12","romagna":"Delta del Po e Romagna|tonno 25-45 - 7-11;alletterato 20-40 - 9-11;palamita 12-30 3-7 9-12;ricciola 18-35 - 8-10;dentice 20-35 - 5-10;sanpietro 25-40 - 11-4;lampuga 20-40 - 8-10;leccia 2-12 1-4 5-10;serra 2-10 1-4 5-11;branzino 2-20 1-5 10-3;orata 3-25 2-5 4-11;sarago 3-25 2-5 9-5;calamaro 12-28 3-6 10-2;seppia 3-18 1-4 3-5/9-11;sgombro 15-35 3-6 5-10;sugarello 12-30 3-6 5-11;grongo 10-30 3-6 10-4;barracuda 4-18 3-6 9-12","marche":"Marche e Conero|tonno 30-65 - 7-11;alletterato 25-55 - 9-11;palamita 15-40 4-10 9-12;ricciola 15-45 - 8-10;dentice 15-40 - 5-10;cernia 15-35 - 6-10;sanpietro 30-60 - 11-4;lampuga 25-55 - 8-10;leccia 3-15 2-7 5-10;serra 2-12 1-5 5-11;branzino 2-18 1-6 10-3;orata 3-22 2-7 4-11;sarago 2-18 1-6 9-5;calamaro 12-30 4-10 10-2;seppia 3-20 2-6 3-5/9-11;sgombro 20-50 4-10 5-10;sugarello 15-40 4-10 5-11;grongo 8-35 3-8 10-4;barracuda 4-18 3-8 9-12","abruzzo":"Abruzzo e Molise|tonno 35-80 - 7-11;alletterato 25-60 - 9-11;palamita 15-45 4-9 9-12;ricciola 18-50 - 8-10;dentice 18-45 - 5-10;cernia 18-40 - 6-10;sanpietro 35-70 - 11-4;lampuga 25-65 - 8-10;leccia 3-15 2-6 5-10;serra 2-12 1-5 5-11;branzino 2-18 1-6 10-3;orata 3-22 2-6 4-11;sarago 2-18 1-6 9-5;calamaro 12-30 4-9 10-2;seppia 3-20 2-5 3-5/9-11;sgombro 20-55 4-9 5-10;sugarello 15-45 4-9 5-11;grongo 8-40 3-8 10-4;barracuda 4-18 3-8 9-12","pugliaadr":"Puglia adriatica|tonno 40-120 - 7-12;alletterato 25-80 5-12 8-11;palamita 15-50 4-12 9-1;ricciola 20-70 6-15 8-11;dentice 18-60 6-12 5-11;cernia 15-50 5-12 5-11;sanpietro 40-90 - 11-4;lampuga 30-90 5-12 8-11;leccia 3-18 2-8 5-11;serra 2-15 1-6 5-12;branzino 2-18 1-7 11-3;orata 3-25 2-8 4-11;sarago 2-22 1-8 10-5;calamaro 12-35 4-12 10-3;seppia 3-20 2-7 2-5/10-12;sgombro 25-60 5-12 5-11;sugarello 15-50 4-12 5-12;grongo 8-45 3-10 10-4;barracuda 4-20 3-10 9-1","calabria":"Puglia ionica e Calabria|tonno 50-300 15-30 4-12;alletterato 20-100 5-15 8-12;palamita 15-60 5-15 9-2;ricciola 20-90 6-18 8-12;dentice 18-70 6-15 4-11;cernia 15-65 5-15 5-11;sanpietro 45-120 - 11-4;lampuga 25-150 6-15 8-11;leccia 3-20 2-10 5-11;serra 2-15 1-8 5-12;branzino 2-18 1-8 11-3;orata 3-25 2-10 4-12;sarago 2-25 1-10 10-5;calamaro 15-45 5-15 10-3;seppia 3-22 2-8 2-5/10-12;sgombro 25-80 5-15 5-11;sugarello 15-60 5-15 5-12;grongo 8-50 3-12 10-4;barracuda 4-25 3-12 1-12","sicilia":"Sicilia|tonno 40-300 15-30 4-12;alletterato 20-100 5-15 8-12;palamita 15-60 5-15 9-2;ricciola 20-100 6-20 8-12;dentice 18-75 6-15 4-11;cernia 15-70 5-15 5-11;sanpietro 45-130 - 11-4;lampuga 25-150 6-15 8-11;leccia 3-20 2-10 5-11;serra 2-15 1-8 5-12;branzino 2-18 1-8 11-3;orata 3-25 2-10 4-12;sarago 2-25 1-10 10-5;calamaro 15-45 5-15 10-3;seppia 3-22 2-8 2-5/10-12;sgombro 25-80 5-15 5-11;sugarello 15-60 5-15 5-12;grongo 8-55 3-12 10-4;barracuda 4-25 3-12 1-12","lazio":"Campania e Lazio|tonno 40-250 - 5-12;alletterato 20-90 5-12 8-11;palamita 15-55 4-12 9-1;ricciola 20-85 6-15 8-11;dentice 18-65 6-14 4-11;cernia 15-60 5-12 5-11;sanpietro 40-110 - 11-4;lampuga 25-120 5-12 8-11;leccia 3-18 2-8 5-11;serra 2-15 1-6 5-12;branzino 2-18 1-7 11-3;orata 3-25 2-8 4-11;sarago 2-22 1-8 10-5;calamaro 15-40 4-12 10-3;seppia 3-20 2-7 2-5/10-12;sgombro 20-70 4-12 5-11;sugarello 15-50 4-12 5-12;grongo 8-45 3-10 10-4;barracuda 4-22 3-10 9-1","liguria":"Toscana e Liguria|tonno 40-300 - 5-12;alletterato 20-90 5-15 8-11;palamita 15-55 4-14 9-1;ricciola 20-85 6-16 8-11;dentice 18-65 6-14 4-11;cernia 15-60 5-12 5-11;sanpietro 40-110 - 11-4;lampuga 25-150 5-14 8-11;leccia 3-18 2-8 5-11;serra 2-15 1-6 5-12;branzino 2-18 1-7 11-3;orata 3-25 2-8 4-11;sarago 2-22 1-8 10-5;calamaro 15-45 4-14 10-3;seppia 3-20 2-7 2-5/10-12;sgombro 25-80 4-14 5-11;sugarello 15-55 4-14 5-12;grongo 8-50 3-12 10-4;barracuda 4-22 3-12 9-1","sardegna":"Sardegna|tonno 40-300 - 4-12;alletterato 20-90 5-15 8-12;palamita 15-55 4-14 9-2;ricciola 20-90 6-18 8-12;dentice 18-70 6-15 4-11;cernia 15-65 5-14 5-11;sanpietro 40-120 - 11-4;lampuga 25-150 5-14 8-11;leccia 3-18 2-8 5-11;serra 2-15 1-6 5-12;branzino 2-18 1-7 11-3;orata 3-25 2-8 4-12;sarago 2-22 1-8 10-5;calamaro 15-45 4-14 10-3;seppia 3-20 2-7 2-5/10-12;sgombro 25-80 4-14 5-11;sugarello 15-55 4-14 5-12;grongo 8-50 3-12 10-4;barracuda 4-22 3-12 1-12"};
+  var DEPTH_IT = {};
+  Object.keys(DEPTH_IT_RAW).forEach(function (k) {
+    var parts = DEPTH_IT_RAW[k].split('|'), map = {};
+    parts[1].split(';').forEach(function (row) {
+      var f = row.split(' '), b = f[1].split('-').map(Number), s = f[2] === '-' ? null : f[2].split('-').map(Number);
+      map[f[0]] = { boat: b, shore: s, months: f[3].split('/').map(function (x) { return x.split('-').map(Number); }) };
+    });
+    DEPTH_IT[k] = { name: parts[0], sp: map };
+  });
+  function depthZoneIT(la, lo) {
+    if (la >= 45.55 && lo >= 13.45 && lo < 14.2) return 'trieste';
+    if (la >= 45.35 && lo >= 12.55 && lo < 14.2) return 'lignano';
+    if (la >= 45.05 && la < 45.7 && lo >= 11.9 && lo < 12.55) return 'venezia';
+    if (la >= 43.85 && la < 45.05 && lo >= 11.9 && lo < 13.2) return 'romagna';
+    if (la >= 42.85 && la < 43.85 && lo >= 12.6 && lo < 14.2) return 'marche';
+    if (la >= 41.85 && la < 42.85 && ADRIATICO(la, lo)) return 'abruzzo';
+    if (la < 41.95 && ADRIATICO(la, lo)) return 'pugliaadr';
+    if (la >= 36.5 && la < 38.4 && lo >= 12.2 && lo < 15.7) return 'sicilia';
+    if (la >= 38.8 && la < 41.3 && lo >= 8 && lo < 9.9) return 'sardegna';
+    if (la >= 37.9 && la < 40.6 && lo >= 15.5 && lo < 18.6) return 'calabria';
+    if (la >= 39.9 && la < 42.5 && lo >= 11.4 && lo < 15.6) return 'lazio';
+    if (la >= 42.3 && la < 44.6 && lo >= 7.3 && lo < 12) return 'liguria';
+    return null;
+  }
+  var LAKES = [["Lago di Garda",45.43,45.9,10.5,10.88,346],["Lago Maggiore",45.72,46.18,8.5,8.85,372],["Lago di Como",45.8,46.18,9.07,9.45,425],["Lago d'Iseo",45.65,45.9,9.97,10.13,251],["Lago di Lugano",45.9,46.06,8.85,9.15,288],["Lago di Varese",45.78,45.85,8.69,8.78,26],["Lago Trasimeno",43.08,43.22,11.98,12.2,6],["Lago di Bolsena",42.53,42.68,11.86,12.04,151],["Lago di Bracciano",42.07,42.17,12.16,12.3,165],["Lago di Corbara",42.68,42.78,12.18,12.32,50],["Lago del Salto",42.2,42.3,13,13.12,80],["Lago del Turano",42.17,42.25,12.92,13,68],["Lago di Bilancino",43.95,44,11.25,11.32,31],["Lago di Pietrafitta",42.98,43.02,12.18,12.24,17],["Lago del Coghinas",40.72,40.82,9,9.12,45],["Lago Omodeo",40.05,40.2,8.85,9.05,60],["Lago di Centro Cadore",46.42,46.5,12.35,12.5,55],["Lago di Santa Croce",46.09,46.13,12.31,12.36,44]], LAKE_DEEP = {"luccio":[[1,6],[8,20],[3,12],[12,25]],"persico":[[3,10],[8,18],[5,15],[15,30]],"lucioperca":[[4,12],[10,22],[6,16],[15,30]],"trota":[[0,15],[20,45],[5,25],[0,20]],"salmerino":[[15,35],[35,70],[20,45],[15,40]],"bass":[[0.5,3],[2,8],[1,5],[6,14]],"siluro":[[2,8],[4,15],[3,12],[10,25]],"carpa":[[1,4],[3,10],[2,8],[8,18]],"coregone":[[10,22],[22,42],[15,28],[5,18]],"carassio":[[0.5,2.5],[1.5,5],[1.5,4],[3,8]],"scardola":[[0.5,2.5],[1,4],[1.5,5],[4,10]]}, LAKE_SPECIAL = {"Lago Trasimeno":{"luccio":[[0.5,2],[2,5],[1.5,4],[2.5,5.5]],"persico":[[1,2.5],[2,5],[1.5,4],[2.5,5.5]],"lucioperca":[[1.5,3],[2.5,5.5],[2,4.5],[3,5.5]],"bass":[[0.5,1.5],[1,3.5],[1,3],[2,5]],"siluro":[[1,2.5],[2,5],[1.5,4],[2.5,5.5]],"carpa":[[0.5,2],[1.5,4.5],[1,3.5],[2.5,5.5]]},"Lago di Varese":{"luccio":[[1,4],[3,9],[2,7],[6,14]],"persico":[[2,6],[3,9],[3,8],[6,15]],"lucioperca":[[2,6],[4,10],[3,9],[7,16]],"bass":[[0.5,2.5],[1.5,5],[1,4],[4,10]],"siluro":[[1,4],[2,8],[2,7],[5,14]],"carpa":[[1,3.5],[2,7],[1.5,6],[5,12]]}};
+  function lakeAt(la, lo) { for (var i = 0; i < LAKES.length; i++) { var L = LAKES[i]; if (la >= L[1] && la <= L[2] && lo >= L[3] && lo <= L[4]) return { name: L[0], max: L[5] }; } return null; }
+  var SEASON_IT = ['inverno', 'inverno', 'primavera', 'primavera', 'primavera', 'estate', 'estate', 'estate', 'autunno', 'autunno', 'autunno', 'inverno'];
+  // profondità consigliata nel lago per quel mese (0 = gennaio); null se la specie non è nella tabella
+  function lakeDepth(spId, lake, month) {
+    var s = { primavera: 0, estate: 1, autunno: 2, inverno: 3 }[SEASON_IT[month]];
+    var t = (LAKE_SPECIAL[lake.name] && LAKE_SPECIAL[lake.name][spId]) || LAKE_DEEP[spId]; if (!t) return null;
+    var r = t[s].slice(); if (r[1] > lake.max) { r[1] = lake.max; r[0] = Math.min(r[0], lake.max * 0.5); }
+    return { range: r, season: SEASON_IT[month] };
+  }
+  // fondale giusto in mare: zona italiana se c'è, altrimenti valori generali della specie
+  function depthBand(spId, la, lo) {
+    var z = depthZoneIT(la, lo), it = z && DEPTH_IT[z].sp[spId];
+    if (it) return { boat: it.boat, shore: it.shore, months: it.months, zone: DEPTH_IT[z].name };
+    var g = DEPTH[spId]; if (!g) return null;
+    var boat = g[3] > 0 ? [g[2], g[3]] : [g[0], g[1]];
+    var shF = SHORE[spId], shore = shF != null && shF < 0.3 ? null : [g[0], Math.min(g[1], 10)];
+    return { boat: boat, shore: shore, months: null, zone: null };
+  }
   var DEPTH = {"branzino":[0.5,15,1,5],"orata":[2,30,5,12],"serra":[0,20,1,6],"sgombro":[10,100,20,50],"sugarello":[5,150,15,40],"leccia":[1,15,2,6],"alletterato":[10,100,15,30],"tonno":[15,200,25,50],"cefalo":[0.5,10,1,3],"seppia":[1,50,3,15],"calamaro":[15,200,20,60],"anguilla":[0.5,10,1,3],"ricciola":[10,150,20,50],"dentice":[10,200,25,60],"sarago":[1,50,3,15],"lampuga":[20,1000,0,0],"barracuda":[1,30,3,12],"grongo":[10,500,20,80],"gt":[1,50,3,15],"barramundi":[0,10,1,3],"striper":[0,30,1,6],"redfish":[0.5,5,1,2],"tarpon":[1,30,2,5],"bonefish":[0.3,3,0.5,1.5],"permit":[1,30,2,6],"snook":[0.5,10,1,3],"vela":[10,1000,0,0],"wahoo":[20,1000,0,0],"pinnagialla":[20,2500,0,50],"sgombroreale":[10,140,15,35],"suzuki":[1,20,1,5],"akame":[0.5,10,1,3],"cernia":[8,120,12,55],"sanpietro":[25,200,25,80],"palamita":[5,150,5,30],"spada":[100,1000,350,650],"merluzzo":[5,250,20,150],"carbonaro":[5,200,10,80],"halibut":[15,250,20,100],"cobia":[1,80,5,30],"marlin":[100,3000,200,1000],"roosterfish":[1,40,1,15],"cubera":[5,70,15,55],"kob":[1,30,2,15],"galjoen":[1,10,1,5],"kurodai":[1,25,2,10],"aoriika":[1,30,2,15],"hiramasa":[5,120,20,60],"mebaru":[1,30,2,10],"snapperau":[1,100,10,40],"flathead":[0.5,15,1,5],"kahawai":[0,30,1,10]};
   function rangeBox(spId, lat, lon) {
     var r = RANGES[spId]; if (!r) return null;
@@ -789,7 +873,7 @@ var PescaEngine = (function () {
     { id: 'eging', name: 'Eging (seppie/calamari)', m: { seppia: 1, calamaro: 1 } },
     { id: 'traina', name: 'Traina', m: { peacock: .6, barramundi: .9, gt: .8, hucho: .5, serra: 1, leccia: 1, alletterato: 1, tonno: .9, sgombro: .9, branzino: .8, sugarello: .7, orata: .05, calamaro: .1, trota: .6, luccio: .9, persico: .4, bass: .5, siluro: .5 } },
     { id: 'drifting', name: 'Drifting (tonni)', m: { gt: .4, tonno: 1, alletterato: .7, serra: .5, leccia: .5, sgombro: .5, sugarello: .3, branzino: .15 } },
-    { id: 'jigging', name: 'Jigging (verticale, slow pitch)', m: {} },
+    { id: 'jigging', name: 'Jigging (verticale, slow pitch, shore)', m: {} },
     { id: 'mosca', name: 'Pesca a mosca', m: { snakehead: .4, peacock: .7, barramundi: .5, ayu: .7, gt: .3, hucho: .6, trota: 1, bass: .7, cefalo: .5, branzino: .5, luccio: .6, persico: .5, carpa: .3, sgombro: .4, sugarello: .3, serra: .2, leccia: .2 } }
   ];
 
@@ -804,7 +888,7 @@ var PescaEngine = (function () {
   };
   TYPES.forEach(function (t) { var x = EXTRA_M[t.id]; if (x) for (var k in x) t.m[k] = x[k]; });
   // Tabella completa specie x tecnica (ricerca punto 6 + specie nuove). Colonne: spinning, surfcasting, bolognese, fondo, eging, traina, drifting, jigging, mosca
-  var TECH = {"branzino":[0.9,0.7,0.8,0.6,0,0.2,0,0.1,0.8],"orata":[0,1,0.6,0.9,0,0,0,0.1,0],"serra":[1,0.8,0.4,0.6,0,0.6,0,0.1,0.5],"sgombro":[0.6,0.1,0.5,0.3,0,0.5,0.3,0.7,0.3],"sugarello":[0.6,0.1,0.6,0.3,0,0.4,0.3,0.7,0.4],"leccia":[0.9,0.4,0.3,0.5,0,0.8,0,0.1,0.8],"alletterato":[0.8,0,0,0,0,0.9,0.5,0.6,0.4],"tonno":[0.7,0,0,0,0,0.9,1,0.5,0.3],"cefalo":[0,0.6,1,0.7,0,0,0,0,0.2],"seppia":[0,0.3,0.1,0.5,1,0.3,0,0.1,0],"calamaro":[0,0.1,0,0.2,1,0.4,0,0.3,0],"anguilla":[0,0.1,0.7,1,0,0,0,0,0.1],"trota":[0.9,0,0.7,0.2,0,0.1,0,0.2,1],"luccio":[1,0,0.1,0.3,0,0.5,0,0.1,0.6],"persico":[0.9,0,0.7,0.5,0,0.2,0,0.6,0.5],"bass":[1,0,0.2,0.3,0,0.1,0,0.1,0.9],"carpa":[0,0.1,0.9,1,0,0,0,0,0.2],"siluro":[0.7,0,0.1,0.9,0,0.4,0,0.8,0.1],"snakehead":[1,0,0,0.2,0,0.2,0,0,0.6],"peacock":[1,0,0,0.1,0,0.3,0,0.1,0.9],"barramundi":[1,0,0.3,0.4,0,0.5,0,0.2,0.8],"ayu":[0.1,0,0.8,0,0,0,0,0,0.7],"gt":[1,0,0,0.1,0,0.5,0.2,0.8,0.5],"hucho":[0.8,0,0,0.1,0,0.3,0,0.1,0.8],"ricciola":[0.6,0,0,0.3,0,0.9,0.5,1,0.2],"dentice":[0.3,0,0,0.8,0,0.8,0.3,1,0.1],"sarago":[0.1,1,0.9,1,0,0,0,0.1,0.1],"lampuga":[0.9,0,0,0,0,1,0.3,0.4,0.6],"barracuda":[1,0.2,0.2,0.4,0,0.8,0,0.3,0.5],"lucioperca":[0.8,0,0.3,0.8,0,0.4,0,0.7,0.3],"temolo":[0.2,0,0.4,0.1,0,0,0,0,1],"muskie":[1,0,0,0.1,0,0.8,0,0.1,0.6],"walleye":[0.6,0,0.2,0.8,0,0.6,0,0.7,0.2],"salmone":[0.9,0,0.1,0.1,0,0.2,0,0.1,1],"salmonepac":[0.8,0.1,0.1,0.2,0,0.8,0,0.5,0.8],"striper":[1,0.8,0.4,0.7,0,0.6,0,0.3,0.9],"redfish":[0.8,0.9,0.4,0.9,0,0.2,0,0.1,0.8],"tarpon":[0.8,0.1,0,0.3,0,0.4,0,0.1,1],"bonefish":[0.2,0,0,0.5,0,0,0,0,1],"permit":[0.1,0,0,0.5,0,0,0,0,1],"snook":[1,0.3,0.3,0.5,0,0.3,0,0.1,0.9],"vela":[0.2,0,0,0,0,1,0.4,0.1,0.5],"wahoo":[0.3,0,0,0,0,1,0.3,0.5,0.1],"pinnagialla":[0.7,0,0,0,0,0.9,0.8,0.8,0.4],"sgombroreale":[0.6,0.3,0,0.5,0,1,0.4,0.4,0.3],"dorado":[1,0,0.1,0.4,0,0.5,0,0.1,0.9],"tigre":[0.8,0,0,0.3,0,0.4,0,0.1,0.8],"nilo":[0.8,0,0,0.5,0,0.9,0,0.6,0.4],"arapaima":[0.5,0,0,0.7,0,0.3,0,0.1,0.4],"mahseer":[0.9,0,0.3,0.8,0,0.1,0,0,0.9],"smallmouth":[1,0,0.2,0.4,0,0.2,0,0.3,0.9],"grongo":[0,0.3,0.1,1,0,0.1,0,0.1,0],"cavedano":[0.8,0,1,0.7,0,0.1,0,0,0.9],"akame":[0.9,0,0,0.3,0,0.3,0,0.1,0.7],"suzuki":[1,0.5,0.7,0.4,0,0.3,0,0.2,0.8],"murraycod":[0.9,0,0.1,0.7,0,0.6,0,0.2,0.5],"traira":[1,0,0.6,0.8,0,0.4,0,0,0.9],"codarossa":[0.1,0,0,1,0,0.2,0,0,0.05],"cernia":[0.2,0,0,0.7,0,0.9,0.3,1,0],"sanpietro":[0,0,0,0.9,0,0.2,0.3,1,0],"palamita":[1,0,0.2,0,0,1,0.8,0.8,0.6],"barbo":[0.3,0,0.9,1,0,0,0,0,0.6],"tinca":[0,0,1,0.9,0,0,0,0,0.1],"persicosole":[0.5,0,1,0.3,0,0,0,0,0.7],"spada":[0,0,0,0,0,0.5,1,0.2,0],"merluzzo":[0.2,0.7,0,0.9,0,0.1,0.5,1,0.1],"carbonaro":[0.9,0.3,0.2,0.4,0,0.6,0.5,1,0.7],"halibut":[0.1,0,0,0.6,0,0.5,0.9,1,0],"salmerino":[1,0,0.5,0.5,0,0.9,0.2,0.6,0.9],"pescegatto":[0.3,0,0.7,1,0,0,0.3,0.1,0.1],"crappie":[1,0,1,0.2,0,0.7,0.6,0.8,0.7],"bluegill":[0.6,0,1,0.4,0,0,0,0.5,0.9],"cobia":[1,0.2,0,0.6,0,0.7,0.9,0.8,0.6],"marlin":[0.1,0,0,0,0,1,0.4,0.1,0.2],"roosterfish":[1,0.5,0,0.2,0,0.9,0.6,0.3,0.8],"surubi":[0.7,0,0,1,0,0.9,0.9,0.2,0.1],"tambaqui":[0.2,0,0.9,1,0,0,0.4,0,0.7],"payara":[1,0,0,0.5,0,0.6,0.5,0.7,0.8],"cubera":[0.6,0,0,1,0,0.4,0.7,0.8,0.2],"kob":[0.7,1,0.4,0.9,0,0.2,0.1,0.3,0.4],"yellowfish":[0.6,0,0.5,0.8,0,0,0,0,1],"galjoen":[0.1,1,0.7,0.8,0,0,0,0,0.2],"kurodai":[0.3,0.8,1,0.9,0,0,0,0.1,0.4],"aoriika":[0,0,0,0,1,0.1,0,0.2,0],"hiramasa":[0.9,0,0.1,0.4,0,0.9,0.7,1,0.5],"mebaru":[1,0,0.8,0.5,0,0,0,0.3,0.6],"snapperau":[0.3,0.4,0.2,1,0,0.4,1,0.9,0.1],"flathead":[1,0.5,0.3,0.9,0,0.5,0.3,0.4,0.7],"ausbass":[1,0,0.4,0.5,0,0.4,0.1,0.2,0.9],"goldenperch":[0.9,0,0.6,1,0,0.7,0.2,0.5,0.4],"kahawai":[1,0.9,0.4,0.6,0,0.7,0.2,0.6,0.9]};
+  var TECH = {"branzino":[0.9,0.7,0.8,0.6,0,0.2,0,0.1,0.8],"orata":[0,1,0.6,0.9,0,0,0,0.1,0],"serra":[1,0.8,0.4,0.6,0,0.6,0,0.1,0.5],"sgombro":[0.6,0.1,0.5,0.3,0,0.5,0.3,0.7,0.3],"sugarello":[0.6,0.1,0.6,0.3,0,0.4,0.3,0.7,0.4],"leccia":[0.9,0.4,0.3,0.5,0,0.8,0,0.1,0.8],"alletterato":[0.8,0,0,0,0,0.9,0.5,0.6,0.4],"tonno":[0.7,0,0,0,0,0.9,1,0.5,0.3],"cefalo":[0,0.6,1,0.7,0,0,0,0,0.2],"seppia":[0,0.3,0.1,0.5,1,0.3,0,0.1,0],"calamaro":[0,0.1,0,0.2,1,0.4,0,0.3,0],"anguilla":[0,0.1,0.7,1,0,0,0,0,0.1],"trota":[0.9,0,0.7,0.2,0,0.1,0,0.2,1],"luccio":[1,0,0.1,0.3,0,0.5,0,0.1,0.6],"persico":[0.9,0,0.7,0.5,0,0.2,0,0.6,0.5],"bass":[1,0,0.2,0.3,0,0.1,0,0.1,0.9],"carpa":[0,0.1,0.9,1,0,0,0,0,0.2],"siluro":[0.7,0,0.1,0.9,0,0.4,0,0.8,0.1],"snakehead":[1,0,0,0.2,0,0.2,0,0,0.6],"peacock":[1,0,0,0.1,0,0.3,0,0.1,0.9],"barramundi":[1,0,0.3,0.4,0,0.5,0,0.2,0.8],"ayu":[0.1,0,0.8,0,0,0,0,0,0.7],"gt":[1,0,0,0.1,0,0.5,0.2,0.8,0.5],"hucho":[0.8,0,0,0.1,0,0.3,0,0.1,0.8],"ricciola":[0.6,0,0,0.3,0,0.9,0.5,1,0.2],"dentice":[0.3,0,0,0.8,0,0.8,0.3,1,0.1],"sarago":[0.1,1,0.9,1,0,0,0,0.1,0.1],"lampuga":[0.9,0,0,0,0,1,0.3,0.4,0.6],"barracuda":[1,0.2,0.2,0.4,0,0.8,0,0.3,0.5],"lucioperca":[0.8,0,0.3,0.8,0,0.4,0,0.7,0.3],"temolo":[0.2,0,0.4,0.1,0,0,0,0,1],"muskie":[1,0,0,0.1,0,0.8,0,0.1,0.6],"walleye":[0.6,0,0.2,0.8,0,0.6,0,0.7,0.2],"salmone":[0.9,0,0.1,0.1,0,0.2,0,0.1,1],"salmonepac":[0.8,0.1,0.1,0.2,0,0.8,0,0.5,0.8],"striper":[1,0.8,0.4,0.7,0,0.6,0,0.3,0.9],"redfish":[0.8,0.9,0.4,0.9,0,0.2,0,0.1,0.8],"tarpon":[0.8,0.1,0,0.3,0,0.4,0,0.1,1],"bonefish":[0.2,0,0,0.5,0,0,0,0,1],"permit":[0.1,0,0,0.5,0,0,0,0,1],"snook":[1,0.3,0.3,0.5,0,0.3,0,0.1,0.9],"vela":[0.2,0,0,0,0,1,0.4,0.1,0.5],"wahoo":[0.3,0,0,0,0,1,0.3,0.5,0.1],"pinnagialla":[0.7,0,0,0,0,0.9,0.8,0.8,0.4],"sgombroreale":[0.6,0.3,0,0.5,0,1,0.4,0.4,0.3],"dorado":[1,0,0.1,0.4,0,0.5,0,0.1,0.9],"tigre":[0.8,0,0,0.3,0,0.4,0,0.1,0.8],"nilo":[0.8,0,0,0.5,0,0.9,0,0.6,0.4],"arapaima":[0.5,0,0,0.7,0,0.3,0,0.1,0.4],"mahseer":[0.9,0,0.3,0.8,0,0.1,0,0,0.9],"smallmouth":[1,0,0.2,0.4,0,0.2,0,0.3,0.9],"grongo":[0,0.3,0.1,1,0,0.1,0,0.1,0],"cavedano":[0.8,0,1,0.7,0,0.1,0,0,0.9],"akame":[0.9,0,0,0.3,0,0.3,0,0.1,0.7],"suzuki":[1,0.5,0.7,0.4,0,0.3,0,0.2,0.8],"murraycod":[.9,0,.1,.7,0,.6,0,.2,.5],"coregone":[0,0,.1,.1,0,.3,0,0,.1],"carassio":[0,0,1,1,0,0,0,0,.1],"scardola":[.2,0,1,.6,0,0,0,0,.8],"traira":[1,0,0.6,0.8,0,0.4,0,0,0.9],"codarossa":[0.1,0,0,1,0,0.2,0,0,0.05],"cernia":[0.2,0,0,0.7,0,0.9,0.3,1,0],"sanpietro":[0,0,0,0.9,0,0.2,0.3,1,0],"palamita":[1,0,0.2,0,0,1,0.8,0.8,0.6],"barbo":[0.3,0,0.9,1,0,0,0,0,0.6],"tinca":[0,0,1,0.9,0,0,0,0,0.1],"persicosole":[0.5,0,1,0.3,0,0,0,0,0.7],"spada":[0,0,0,0,0,0.5,1,0.2,0],"merluzzo":[0.2,0.7,0,0.9,0,0.1,0.5,1,0.1],"carbonaro":[0.9,0.3,0.2,0.4,0,0.6,0.5,1,0.7],"halibut":[0.1,0,0,0.6,0,0.5,0.9,1,0],"salmerino":[1,0,0.5,0.5,0,0.9,0.2,0.6,0.9],"pescegatto":[0.3,0,0.7,1,0,0,0.3,0.1,0.1],"crappie":[1,0,1,0.2,0,0.7,0.6,0.8,0.7],"bluegill":[0.6,0,1,0.4,0,0,0,0.5,0.9],"cobia":[1,0.2,0,0.6,0,0.7,0.9,0.8,0.6],"marlin":[0.1,0,0,0,0,1,0.4,0.1,0.2],"roosterfish":[1,0.5,0,0.2,0,0.9,0.6,0.3,0.8],"surubi":[0.7,0,0,1,0,0.9,0.9,0.2,0.1],"tambaqui":[0.2,0,0.9,1,0,0,0.4,0,0.7],"payara":[1,0,0,0.5,0,0.6,0.5,0.7,0.8],"cubera":[0.6,0,0,1,0,0.4,0.7,0.8,0.2],"kob":[0.7,1,0.4,0.9,0,0.2,0.1,0.3,0.4],"yellowfish":[0.6,0,0.5,0.8,0,0,0,0,1],"galjoen":[0.1,1,0.7,0.8,0,0,0,0,0.2],"kurodai":[0.3,0.8,1,0.9,0,0,0,0.1,0.4],"aoriika":[0,0,0,0,1,0.1,0,0.2,0],"hiramasa":[0.9,0,0.1,0.4,0,0.9,0.7,1,0.5],"mebaru":[1,0,0.8,0.5,0,0,0,0.3,0.6],"snapperau":[0.3,0.4,0.2,1,0,0.4,1,0.9,0.1],"flathead":[1,0.5,0.3,0.9,0,0.5,0.3,0.4,0.7],"ausbass":[1,0,0.4,0.5,0,0.4,0.1,0.2,0.9],"goldenperch":[0.9,0,0.6,1,0,0.7,0.2,0.5,0.4],"kahawai":[1,0.9,0.4,0.6,0,0.7,0.2,0.6,0.9]};
   var TECH_COLS = ['spinning', 'surfcasting', 'bolognese', 'fondo', 'eging', 'traina', 'drifting', 'jigging', 'mosca'];
   TYPES.forEach(function (t) { var c = TECH_COLS.indexOf(t.id); if (c < 0) return; for (var sp in TECH) t.m[sp] = TECH[sp][c]; });
 
@@ -1127,7 +1211,7 @@ var PescaEngine = (function () {
   var SHALLOW = { alletterato: 0.05, ricciola: 0.02, dentice: 0.02, lampuga: 0.01 };
   var ZONES = [
     { name: 'Golfo di Trieste', test: function (la, lo) { return la >= 45.55 && lo >= 13.45 && lo < 14.2; },
-      p: { tonno: 0.5, alletterato: 0.05, leccia: 0.5, ricciola: 0.15, lampuga: 0.15, dentice: 0.5, serra: 0.5, barracuda: 0.15, cernia: 0.5, spada: 0 }, shore: SHALLOW },
+      p: { tonno: 0.5, alletterato: 0.05, leccia: 0.5, ricciola: 0.15, lampuga: 0.15, dentice: 0.5, serra: 0.5, barracuda: 0.15, cernia: 0.15, spada: 0 }, shore: SHALLOW },
     { name: 'Alto Adriatico orientale', test: function (la, lo) { return la >= 45.35 && lo >= 12.55 && lo < 14.2; },
       p: { tonno: 0.15, alletterato: 0.05, leccia: 0.5, ricciola: 0.15, lampuga: 0.15, dentice: 0.15, serra: 0.5, barracuda: 0.15, cernia: 0.15, spada: 0 }, shore: SHALLOW },
     { name: 'Laguna veneta e Chioggia', test: function (la, lo) { return la >= 44.8 && la < 45.7 && lo >= 11.9 && lo < 12.55; },
@@ -1166,6 +1250,7 @@ var PescaEngine = (function () {
     if (habitat < 1) why.push(['-', sp.hab === 'fresh' ? 'Specie d’acqua dolce' : 'Specie di mare']);
     var mult = ty.m[sp.id] != null ? ty.m[sp.id] : 0.03;
     if (mult < 0.3) why.push(['-', 'Tecnica poco adatta']);
+    if (ty.id === 'jigging' && env === 'fresh') { mult = 0; why.push(['-', 'Il jigging lo contiamo solo in mare']); }
     // riva o barca
     if (SPOT === 'shore') {
       if (ty.id === 'traina' || ty.id === 'drifting') { mult *= 0.05; why.push(['-', 'Questa tecnica si fa in barca']); }
@@ -1324,7 +1409,7 @@ var PescaEngine = (function () {
     dayCurve: dayCurve, bestWindow: bestWindow, tideExtremes: tideExtremes, seaLevel: seaLevel,
     local: local, localMidnight: localMidnight, moon: moon, envOf: envOf, windName: windName, windSide: windSide, skyName: skyName, verdict: verdict,
     byId: byId, PERIOD_NAMES: PERIOD_NAMES, setSpot: setSpot,
-    setPresence: setPresence, zoneOf: zoneOf, presenceInfo: presenceInfo, PRES_LEVELS: PRES_LEVELS, inRange: inRange, loadClimate: loadClimate, seasonAt: seasonAt, DEPTH: DEPTH
+    setPresence: setPresence, zoneOf: zoneOf, presenceInfo: presenceInfo, PRES_LEVELS: PRES_LEVELS, inRange: inRange, loadClimate: loadClimate, seasonAt: seasonAt, DEPTH: DEPTH, depthBand: depthBand, lakeAt: lakeAt, lakeDepth: lakeDepth
   };
 })();
 
@@ -1332,7 +1417,7 @@ var PescaEngine = (function () {
 <script>
 (function () {
   'use strict';
-  var APP_NAME = 'Pescomante', APP_VERSION = '25', APP_DATE = '2026-11-16';
+  var APP_NAME = 'Pescomante', APP_VERSION = '29', APP_DATE = '2026-11-16';
   var E = PescaEngine, H = E.H, D = E.D;
   var $ = function (id) { return document.getElementById(id); };
   var GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
@@ -1452,7 +1537,7 @@ var PescaEngine = (function () {
     var fresh = E.envOf(data, S.env) === 'fresh';
     [].forEach.call($('type').options, function (o) {
       if (o.value === 'traina') o.textContent = fresh ? 'Traina in lago o fiume' : 'Traina in mare';
-      if (/^(surfcasting|eging|drifting)$/.test(o.value)) o.hidden = fresh;
+      if (/^(surfcasting|eging|drifting|jigging)$/.test(o.value)) o.hidden = fresh;
     });
   }
 
@@ -1492,7 +1577,7 @@ var PescaEngine = (function () {
         if (bb) { S.target = bb.id; S.type = bb.typeId; $('type').value = S.type; }
         delete S.needTarget; save();
       }
-      fillTargets(); fixTypes();
+      fillTargets(); fixTypes(); updateBathyThumb();
       if (G.tLat !== S.place.lat || G.tLon !== S.place.lon) globeTo(S.place.lat, S.place.lon);
       loadFavs();
       calCache = {};
@@ -1689,6 +1774,7 @@ var PescaEngine = (function () {
     var curve = E.dayCurve(data, mid, CT, CY, S.env), best = E.bestWindow(curve);
     $('vWhen').innerHTML = dayLong(sel) + ', ore ' + hhmm(sel) + (c.forecast ? '' : ' <span class="tag">stima</span>') +
       '<br>' + (best.pct < 15 ? 'Oggi nessuna fascia oraria buona per questa specie.' : 'Migliore della giornata: <b>' + pad(best.from) + ':00–' + pad(best.to % 24) + ':00</b> (' + best.pct + '%)');
+    renderWhere(env);
     if (broadNote) $('vWhen').insertAdjacentHTML('afterbegin', '<span class="tag">' + esc(broadNote) + '</span><br>');
     $('vWhy').innerHTML = me.why.map(function (w) {
       return '<li class="' + (w[0] === '+' ? 'p' : 'm') + '"><b>' + (w[0] === '+' ? '+' : '−') + '</b>' + w[1] + '</li>';
@@ -2244,6 +2330,237 @@ var PescaEngine = (function () {
     if ($('wFav').classList.contains('min')) { $('wFav').classList.remove('min'); favOpened = true; renderFavs(); }
   });
   $('wFav').querySelector('[data-min]').addEventListener('click', function () { favOpened = true; setTimeout(renderFavs, 0); });
+
+  // ---------- fondali: dove pescarlo (miglia dalla costa) ----------
+  var EU = function (la, lo) { return la > 25 && la < 72 && lo > -36 && lo < 45; };
+  function nm(km) { return km / 1.852; }
+  function bearingName(b) { return ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'][Math.round(b / 45) % 8]; }
+  var profCache = {};
+  // profilo del fondale verso il largo: EMODnet in Europa, GEBCO nel resto del mondo
+  function seaProfile(la, lo, bear) {
+    var key = 'pesca.prof.' + la.toFixed(3) + '_' + lo.toFixed(3) + '_' + Math.round(bear);
+    if (profCache[key]) return Promise.resolve(profCache[key]);
+    try { var c = JSON.parse(localStorage.getItem(key) || 'null'); if (c) { profCache[key] = c; return Promise.resolve(c); } } catch (e) {}
+    var L = 30 * 1.852, r = bear * Math.PI / 180, k = 111.32;
+    var la2 = la + L / k * Math.cos(r), lo2 = lo + L / (k * Math.cos(la * Math.PI / 180)) * Math.sin(r);
+    var done = function (depths) { var p = { km: L, d: depths }; profCache[key] = p; try { localStorage.setItem(key, JSON.stringify(p)); } catch (e) {} return p; };
+    if (EU(la, lo)) {
+      return getJSON('https://rest.emodnet-bathymetry.eu/depth_profile?geom=LINESTRING(' + lo.toFixed(5) + ' ' + la.toFixed(5) + ',' + lo2.toFixed(5) + ' ' + la2.toFixed(5) + ')')
+        .then(function (arr) { if (!Array.isArray(arr) || arr.length < 10) throw new Error('profilo'); return done(arr.map(function (x) { return x == null ? 1 : x; })); });
+    }
+    var pts = []; for (var i = 0; i < 100; i++) { var f = i / 99; pts.push((la + (la2 - la) * f).toFixed(4) + ',' + (lo + (lo2 - lo) * f).toFixed(4)); }
+    return getJSON('https://api.opentopodata.org/v1/gebco2020?locations=' + pts.join('|'))
+      .then(function (j) { return done(j.results.map(function (r) { return r.elevation; })); });
+  }
+  // da dove a dove (miglia dalla costa) il fondale è nella fascia [a, b] metri
+  function bandMiles(p, a, b) {
+    var n = p.d.length, step = nm(p.km) / (n - 1), c = -1;
+    for (var i = 0; i < n; i++) if (p.d[i] < -0.5) { c = i; break; }
+    if (c < 0) return null;
+    var from = null, to = null;
+    for (var j = c; j < n; j++) { var z = -p.d[j]; if (from == null && z >= a) from = (j - c) * step; if (from != null && z > b) { to = (j - c) * step; break; } }
+    if (from == null) return { none: true, maxDepth: Math.round(Math.max.apply(null, p.d.slice(c).map(function (x) { return -x; }))) };
+    return { from: from, to: to };
+  }
+  function fmtMiles(x) { return x < 1 ? (x < 0.3 ? 'meno di 1/4 di miglio' : 'mezzo miglio') : Math.round(x) + ''; }
+  var whereSeq = 0;
+  function renderWhere(env) {
+    var box = $('vWhere'), my = ++whereSeq, m = L(sel).getUTCMonth();
+    if (env === 'fresh') {
+      var lake = E.lakeAt(S.place.lat, S.place.lon), ld = lake && E.lakeDepth(CT, lake, m);
+      if (!ld) { box.hidden = true; return; }
+      box.hidden = false;
+      box.innerHTML = '<div><b>Dove pescarlo</b> &middot; ' + esc(lake.name) + ' (profondo fino a ' + lake.max + ' m)</div><div>Profondità giusta adesso (' + ld.season + '): <b>' + ld.range[0] + '–' + ld.range[1] + ' m</b></div>';
+      return;
+    }
+    var band = E.depthBand(CT, S.place.lat, S.place.lon);
+    if (!band) { box.hidden = true; return; }
+    box.hidden = false;
+    var head = '<div><b>Dove pescarlo</b>' + (band.zone ? ' &middot; ' + esc(band.zone) : '') + '</div>';
+    var shoreTxt = '<div>Da riva: ' + (band.shore ? 'fondale <b>' + band.shore[0] + '–' + band.shore[1] + ' m</b> (moli, scogliere, foci)' : 'di solito non si prende') + '</div>';
+    var boatTxt = function (extra) { return '<div>Da barca: fondale <b>' + band.boat[0] + '–' + band.boat[1] + ' m</b>' + (extra || '') + '</div>'; };
+    box.innerHTML = head + boatTxt(' &middot; cerco a che distanza&hellip;') + shoreTxt;
+    if (data.seaDir == null) { box.innerHTML = head + boatTxt() + shoreTxt; return; }
+    seaProfile(S.place.lat, S.place.lon, data.seaDir).then(function (p) {
+      if (my !== whereSeq) return;
+      var r = bandMiles(p, band.boat[0], band.boat[1]), dir = ' verso ' + bearingName(data.seaDir);
+      var extra = !r ? '' : r.none ? ' &middot; entro 30 miglia' + dir + ' il fondale arriva solo a ' + r.maxDepth + ' m' :
+        ' &rarr; a <b>' + fmtMiles(r.from) + (r.to != null ? '–' + fmtMiles(r.to) : '+') + ' miglia</b> dalla costa' + dir;
+      box.innerHTML = head + boatTxt(extra) + shoreTxt;
+    }).catch(function () { if (my === whereSeq) box.innerHTML = head + boatTxt(' &middot; distanza non disponibile') + shoreTxt; });
+  }
+
+  // ---------- riquadro e mappa dei fondali ----------
+  function wmsFor(la, lo) {
+    return EU(la, lo)
+      ? { url: 'https://ows.emodnet-bathymetry.eu/wms', layers: 'emodnet:mean_atlas_land,emodnet:contours', src: 'Fondali: EMODnet Bathymetry (UE)' }
+      : { url: 'https://wms.gebco.net/mapserv', layers: 'GEBCO_LATEST', src: 'Fondali: GEBCO' };
+  }
+  function updateBathyThumb() {
+    var la = S.place.lat, lo = S.place.lon, w = wmsFor(la, lo), d = 0.18, dl = d / Math.cos(la * Math.PI / 180);
+    $('bathyImg').src = w.url + '?service=WMS&version=1.1.1&request=GetMap&styles=&srs=EPSG:4326&format=image/png&width=200&height=200&layers=' + encodeURIComponent(w.layers) +
+      '&bbox=' + (lo - dl).toFixed(4) + ',' + (la - d).toFixed(4) + ',' + (lo + dl).toFixed(4) + ',' + (la + d).toFixed(4);
+  }
+  var bmap = null, bmark = null, LF = null;
+  function loadLeaflet() {
+    if (LF) return LF;
+    LF = new Promise(function (res, rej) {
+      var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css'; document.head.appendChild(css);
+      var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'; s.onload = function () { res(window.L); }; s.onerror = rej; document.head.appendChild(s);
+    });
+    return LF;
+  }
+  function depthAt(la, lo) {
+    if (EU(la, lo)) return getJSON('https://rest.emodnet-bathymetry.eu/depth_sample?geom=POINT(' + lo.toFixed(5) + ' ' + la.toFixed(5) + ')').then(function (j) { return j && j.avg != null ? j.avg : null; });
+    return getJSON('https://api.opentopodata.org/v1/gebco2020?locations=' + la.toFixed(5) + ',' + lo.toFixed(5)).then(function (j) { return j.results[0].elevation; });
+  }
+  function bInfo(la, lo, depthTxt) {
+    var c = la.toFixed(5) + ', ' + lo.toFixed(5);
+    $('bInfo').innerHTML = '<span>Punto: <b id="bCoord">' + c + '</b></span><button class="btn raised" id="bCopy">Copia coordinate</button><span id="bDepth">' + depthTxt + '</span><button class="btn raised" id="bUse">Usa questo punto</button>';
+    $('bCopy').onclick = function () {
+      var ok = function () { $('bCopy').textContent = 'Copiate!'; setTimeout(function () { if ($('bCopy')) $('bCopy').textContent = 'Copia coordinate'; }, 1500); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(c).then(ok, function () { prompt('Copia le coordinate:', c); });
+      else prompt('Copia le coordinate:', c);
+    };
+    $('bUse').onclick = function () { $('bathyDlg').hidden = true; choose({ name: c, lat: la, lon: lo }); };
+  }
+  function openBathy() {
+    $('bathyDlg').hidden = false;
+    var la = S.place.lat, lo = S.place.lon, w = wmsFor(la, lo);
+    $('bSrc').textContent = w.src + ' · Mappa: OpenStreetMap. I colori servono a orientarsi; la profondità esatta del punto la leggi qui sopra.';
+    loadLeaflet().then(function (Lf) {
+      if (!bmap) {
+        bmap = Lf.map('bmap', { zoomControl: true, attributionControl: true });
+        Lf.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '&copy; OpenStreetMap' }).addTo(bmap);
+        bmap._depthLayer = null;
+        bmap.on('click', function (ev) {
+          var p = ev.latlng;
+          if (bmark) bmark.setLatLng(p); else bmark = Lf.circleMarker(p, { radius: 6, color: '#fff', weight: 2, fillColor: '#e00000', fillOpacity: 1 }).addTo(bmap);
+          bInfo(p.lat, p.lng, 'Profondità: leggo&hellip;');
+          depthAt(p.lat, p.lng).then(function (z) {
+            if (!$('bDepth')) return;
+            $('bDepth').innerHTML = z == null ? 'Profondità: non disponibile' : z < 0 ? 'Profondità: <b>' + Math.round(-z * 10) / 10 + ' m</b>' : 'Terraferma (' + Math.round(z) + ' m s.l.m.)';
+          }, function () { if ($('bDepth')) $('bDepth').textContent = 'Profondità: non disponibile'; });
+        });
+      }
+      if (bmap._depthLayer) bmap.removeLayer(bmap._depthLayer);
+      bmap._depthLayer = Lf.tileLayer.wms(w.url, { layers: w.layers, format: 'image/png', transparent: true, opacity: 0.6, version: '1.1.1' }).addTo(bmap);
+      bmap.setView([la, lo], 10);
+      setTimeout(function () { bmap.invalidateSize(); }, 50);
+      if (bmark) { bmap.removeLayer(bmark); bmark = null; }
+      if (isoLayer) { bmap.removeLayer(isoLayer); isoLayer = null; }
+      $('bStat').textContent = 'Disegna le linee di profondità con i metri nella zona che vedi.';
+      $('bInfo').textContent = 'Tocca la mappa per fissare un punto: ti dico coordinate e profondità.';
+    }).catch(function () { $('bInfo').textContent = 'Mappa non disponibile: controlla la connessione.'; });
+  }
+  // ---------- batimetriche dettagliate: griglia di profondità -> linee ogni 5/10 m con le cifre ----------
+  var isoLayer = null, isoCache = {};
+  function isoLevels(maxD) {
+    var all = [2, 5, 10, 15, 20, 25, 30, 40, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000];
+    var lv = all.filter(function (x) { return x < maxD; });
+    if (lv.length > 14) lv = lv.filter(function (x) { return x >= 10; });
+    return lv;
+  }
+  // profondità (positive in metri, 0 = terra) su una griglia rows x cols dentro i limiti b
+  function depthGrid(b, rows, cols, onStep) {
+    var S = b.getSouth(), N = b.getNorth(), W = b.getWest(), Ea = b.getEast(), eu = EU((S + N) / 2, (W + Ea) / 2), grid = [], done = 0;
+    var latOf = function (i) { return S + (i + 0.5) / rows * (N - S); };
+    if (eu) {
+      var one = function (i) {
+        var la = latOf(i).toFixed(5);
+        return getJSON('https://rest.emodnet-bathymetry.eu/depth_profile?geom=LINESTRING(' + W.toFixed(5) + ' ' + la + ',' + Ea.toFixed(5) + ' ' + la + ')').then(function (arr) {
+          var n = arr.length, row = [];
+          for (var j = 0; j < cols; j++) { var v = arr[Math.round(j * (n - 1) / (cols - 1))]; row.push(v == null || v > 0 ? 0 : -v); }
+          grid[i] = row; onStep(++done, rows);
+        });
+      };
+      var chain = Promise.resolve(), idx = 0, lanes = [];
+      for (var k = 0; k < 6; k++) lanes.push((function () { var p = Promise.resolve(); return { add: function (f) { p = p.then(f); return p; } }; })());
+      var all = [];
+      for (var i = 0; i < rows; i++) all.push(lanes[i % 6].add((function (ii) { return function () { return one(ii); }; })(i)));
+      return Promise.all(all).then(function () { return { g: grid, S: S, N: N, W: W, E: Ea, rows: rows, cols: cols }; });
+    }
+    // fuori dall'Europa: GEBCO, 100 punti per richiesta, una richiesta al secondo
+    rows = Math.min(rows, 20); cols = Math.min(cols, 25);
+    var pts = []; for (var r = 0; r < rows; r++) for (var c = 0; c < cols; c++) pts.push([latOf(r), W + c / (cols - 1) * (Ea - W)]);
+    var out = new Array(pts.length), batches = [];
+    for (var s = 0; s < pts.length; s += 100) batches.push(s);
+    return batches.reduce(function (p, s0, bi) {
+      return p.then(function () { return new Promise(function (res) { setTimeout(res, bi ? 1100 : 0); }); }).then(function () {
+        var part = pts.slice(s0, s0 + 100);
+        return getJSON('https://api.opentopodata.org/v1/gebco2020?locations=' + part.map(function (q) { return q[0].toFixed(4) + ',' + q[1].toFixed(4); }).join('|')).then(function (j) {
+          j.results.forEach(function (r0, k2) { out[s0 + k2] = r0.elevation > 0 ? 0 : -r0.elevation; }); onStep(bi + 1, batches.length);
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      for (var r = 0; r < rows; r++) grid.push(out.slice(r * cols, (r + 1) * cols));
+      return { g: grid, S: S, N: N, W: W, E: Ea, rows: rows, cols: cols };
+    });
+  }
+  // marching squares: segmenti della linea di profondità "lev"
+  function isoSegments(G, lev) {
+    var segs = [], g = G.g, R = G.rows, C = G.cols;
+    var P = function (i, j) { return [G.S + (i + 0.5) / R * (G.N - G.S), G.W + j / (C - 1) * (G.E - G.W)]; };
+    var lerp = function (p1, p2, v1, v2) { var t = (lev - v1) / (v2 - v1); return [p1[0] + (p2[0] - p1[0]) * t, p1[1] + (p2[1] - p1[1]) * t]; };
+    for (var i = 0; i < R - 1; i++) for (var j = 0; j < C - 1; j++) {
+      var a0 = g[i][j], b0 = g[i][j + 1], c0 = g[i + 1][j + 1], d0 = g[i + 1][j];
+      var idx = (a0 >= lev ? 1 : 0) | (b0 >= lev ? 2 : 0) | (c0 >= lev ? 4 : 0) | (d0 >= lev ? 8 : 0);
+      if (idx === 0 || idx === 15) continue;
+      var pa = P(i, j), pb = P(i, j + 1), pc = P(i + 1, j + 1), pd = P(i + 1, j);
+      var eAB = function () { return lerp(pa, pb, a0, b0); }, eBC = function () { return lerp(pb, pc, b0, c0); }, eCD = function () { return lerp(pd, pc, d0, c0); }, eDA = function () { return lerp(pa, pd, a0, d0); };
+      switch (idx) {
+        case 1: case 14: segs.push([eDA(), eAB()]); break;
+        case 2: case 13: segs.push([eAB(), eBC()]); break;
+        case 3: case 12: segs.push([eDA(), eBC()]); break;
+        case 4: case 11: segs.push([eBC(), eCD()]); break;
+        case 6: case 9: segs.push([eAB(), eCD()]); break;
+        case 7: case 8: segs.push([eDA(), eCD()]); break;
+        case 5: segs.push([eDA(), eAB()]); segs.push([eBC(), eCD()]); break;
+        case 10: segs.push([eAB(), eBC()]); segs.push([eDA(), eCD()]); break;
+      }
+    }
+    return segs;
+  }
+  function drawIso(Lf, G) {
+    if (isoLayer) bmap.removeLayer(isoLayer);
+    isoLayer = Lf.layerGroup().addTo(bmap);
+    // griglia ammorbidita (mediana 3x3): toglie i punti isolati sbagliati dei dati ufficiali
+    var g0 = G.g, sm = g0.map(function (row, i) { return row.map(function (v, j) { var nb = []; for (var di = -1; di <= 1; di++) for (var dj = -1; dj <= 1; dj++) { var r2 = g0[i + di]; if (r2 && r2[j + dj] != null) nb.push(r2[j + dj]); } nb.sort(function (x, y) { return x - y; }); return nb[nb.length >> 1]; }); });
+    G = { g: sm, S: G.S, N: G.N, W: G.W, E: G.E, rows: G.rows, cols: G.cols };
+    // linee scelte sulle profondità tipiche della zona (95%), non sul massimo
+    var vals = []; sm.forEach(function (r) { r.forEach(function (v) { if (v > 0) vals.push(v); }); }); vals.sort(function (x, y) { return x - y; });
+    var maxD = vals.length ? vals[Math.floor(vals.length * 0.95)] * 1.1 : 0;
+    var levels = isoLevels(maxD), nLab = 0;
+    levels.forEach(function (lev) {
+      var segs = isoSegments(G, lev); if (!segs.length) return;
+      var major = lev % 10 === 0 || lev === 5;
+      Lf.polyline(segs, { color: '#0b2a5a', weight: major ? 1.6 : 1, opacity: 0.85, interactive: false }).addTo(isoLayer);
+      var step = Math.max(1, Math.floor(segs.length / 3));
+      for (var k = Math.floor(step / 2); k < segs.length && nLab < 60; k += step) {
+        var s = segs[k], m = [(s[0][0] + s[1][0]) / 2, (s[0][1] + s[1][1]) / 2];
+        Lf.marker(m, { interactive: false, icon: Lf.divIcon({ className: '', html: '<span class="isolbl">' + lev + '</span>', iconSize: null }) }).addTo(isoLayer); nLab++;
+      }
+    });
+    return levels;
+  }
+  $('bIso').onclick = function () {
+    if (!bmap) return;
+    var b = bmap.getBounds(), span = Math.max(b.getNorth() - b.getSouth(), b.getEast() - b.getWest());
+    if (span > 1.2) { $('bStat').textContent = 'Zona troppo grande: avvicinati un po\u2019 con lo zoom e riprova.'; return; }
+    var key = [b.getSouth(), b.getNorth(), b.getWest(), b.getEast()].map(function (x) { return x.toFixed(3); }).join('_');
+    var btn = this; btn.disabled = true;
+    loadLeaflet().then(function (Lf) {
+      if (isoCache[key]) { var lv0 = drawIso(Lf, isoCache[key]); $('bStat').textContent = 'Linee a ' + lv0.join(', ') + ' m.'; btn.disabled = false; return; }
+      $('bStat').textContent = 'Scarico le profondità\u2026';
+      return depthGrid(b, 26, 64, function (d, t) { $('bStat').textContent = 'Scarico le profondità\u2026 ' + Math.round(d / t * 100) + '%'; })
+        .then(function (G) { isoCache[key] = G; var lv = drawIso(Lf, G); $('bStat').textContent = lv.length ? 'Linee a ' + lv.join(', ') + ' m.' : 'Qui non c\u2019è mare.'; })
+        .catch(function () { $('bStat').textContent = 'Non sono riuscito a scaricare le profondità: riprova tra poco.'; })
+        .then(function () { btn.disabled = false; });
+    });
+  };
+  $('bathyThumb').onclick = openBathy;
+  $('bathyClose').onclick = function () { $('bathyDlg').hidden = true; };
+  $('bathyDlg').addEventListener('click', function (e) { if (e.target === this) this.hidden = true; });
 
   // ---------- radar: mappa di Windy (non influenza il resto dell'app) ----------
   var radar = { ov: 'rain', lat: null, lon: null };
