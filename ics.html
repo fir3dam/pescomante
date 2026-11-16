@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pescomante · Promemoria</title>
+<style>
+  body { margin: 0; background: #3a6ea5; font: 15px/1.4 Tahoma, Verdana, sans-serif; color: #000; padding: 16px; }
+  .win { max-width: 420px; margin: 20px auto; background: #d4d0c8; box-shadow: inset -1px -1px #404040, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf; padding: 3px; }
+  .title { background: linear-gradient(90deg, #0a246a, #3a6ea5); color: #fff; font-weight: bold; padding: 4px 6px; }
+  .body { padding: 12px; }
+  .btn { display: block; width: 100%; box-sizing: border-box; margin: 10px 0 0; padding: 12px; font: bold 15px Tahoma, Verdana, sans-serif; text-align: center; text-decoration: none; color: #000; background: #d4d0c8; border: 0;
+    box-shadow: inset -1px -1px #404040, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf; }
+  .muted { color: #444; font-size: 12px; }
+  .err { color: #c00000; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 0 0 6px; } dt { color: #444; } dd { margin: 0; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="title">Promemoria uscita di pesca</div>
+  <div class="body">
+    <div id="info">Leggo il promemoria&hellip;</div>
+    <a class="btn" id="add" href="#">Aggiungi al Calendario</a>
+    <a class="btn" id="dl" href="#">Scarica il file del calendario</a>
+    <a class="btn" id="back" href="./">&larr; Torna a Pescomante</a>
+    <p class="muted">Se &laquo;Aggiungi al Calendario&raquo; non fa niente, prova &laquo;Scarica il file&raquo; e aprilo dall&rsquo;app File, oppure torna a Pescomante e scegli Google Calendar.</p>
+  </div>
+</div>
+<script>
+(function () {
+  function dec(c) { c = c.replace(/-/g, '+').replace(/_/g, '/'); while (c.length % 4) c += '='; return decodeURIComponent(escape(atob(c))); }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  var m = /[#&]d=([A-Za-z0-9_-]+)/.exec(location.hash), ics = null;
+  try { if (m) { ics = dec(m[1]); if (ics.charAt(0) === '"') ics = JSON.parse(ics); } } catch (e) { ics = null; }
+  var info = document.getElementById('info');
+  if (!ics) { info.innerHTML = '<span class="err">Promemoria non trovato. Torna a Pescomante e riprova.</span>'; document.getElementById('add').style.display = 'none'; document.getElementById('dl').style.display = 'none'; return; }
+  function field(k) { var r = new RegExp('^' + k + '[^:]*:(.*)$', 'm').exec(ics); return r ? r[1].replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\n/g, ' ') : ''; }
+  var st = field('DTSTART'), when = '';
+  var p = /^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z$/.exec(st);
+  if (p) { var d = new Date(Date.UTC(+p[1], +p[2] - 1, +p[3], +p[4], +p[5])); when = d.toLocaleString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' }) + ' (ora del telefono)'; }
+  var alarms = []; ics.replace(/BEGIN:VALARM[\s\S]*?DESCRIPTION:(.*)[\s\S]*?END:VALARM/g, function (a, b) { alarms.push(b.replace(/\\,/g, ',')); return a; });
+  info.innerHTML = '<dl><dt>Uscita</dt><dd>' + esc(field('SUMMARY')) + '</dd><dt>Quando</dt><dd>' + esc(when) + '</dd><dt>Dove</dt><dd>' + esc(field('LOCATION')) + '</dd><dt>Avvisi</dt><dd>' + (alarms.length ? alarms.map(esc).join('<br>') : 'nessuno') + '</dd></dl>';
+  var data = 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+  document.getElementById('add').href = data;
+  var dl = document.getElementById('dl');
+  dl.onclick = function (e) {
+    e.preventDefault();
+    var f = new File([ics], 'pescomante.ics', { type: 'text/calendar' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { navigator.share({ files: [f], title: 'Promemoria Pescomante' }).catch(function () {}); return; }
+    var u = URL.createObjectURL(f), a = document.createElement('a'); a.href = u; a.download = 'pescomante.ics'; document.body.appendChild(a); a.click(); a.remove();
+  };
+})();
+</script>
+</body>
+</html>

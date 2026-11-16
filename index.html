@@ -1615,7 +1615,7 @@ var PescaEngine = (function () {
 <script>
 (function () {
   'use strict';
-  var APP_NAME = 'Pescomante', APP_VERSION = '46', APP_DATE = '2026-11-16';
+  var APP_NAME = 'Pescomante', APP_VERSION = '48', APP_DATE = '2026-11-16';
   var E = PescaEngine, H = E.H, D = E.D;
   var $ = function (id) { return document.getElementById(id); };
   var GIORNI = ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
@@ -3649,6 +3649,7 @@ var PescaEngine = (function () {
     '.urem input[type=number] { width: 60px; }',
     '#uPasteTxt { width: 100%; min-height: 90px; box-sizing: border-box; font: inherit; }',
     '.uempty { padding: 10px 4px; }',
+    '#uIos a.btn, #uShare a.btn { text-decoration: none; color: inherit; }',
     '@media (max-width: 600px) { .taskbar .task:not(.on) > span { display: none; } .taskbar .task { flex: 0 0 auto; } .taskbar .task.on { flex: 1 1 auto; } }'
   ].join('\n');
   document.head.appendChild(css);
@@ -3748,11 +3749,33 @@ var PescaEngine = (function () {
   function sendIcs(u) {
     var txt = makeIcs(u), fname = (u.name.replace(/[^A-Za-z0-9À-ÿ _-]+/g, '').trim() || 'uscita') + '.ics';
     var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (ios) { window.open('data:text/calendar;charset=utf-8,' + encodeURIComponent(txt), '_blank'); return; }
+    // iPhone: una pagina "dati" dentro la web app resta bianca e blocca tutto; offro tre strade che non bloccano
+    if (ios) { iosRem(u, txt, fname); return; }
     var url = URL.createObjectURL(new Blob([txt], { type: 'text/calendar' })), a = document.createElement('a');
     a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
   }
+  var iosDlg = modal('uIos', '<div class="title"><span>' + BELL + ' Aggiungi il promemoria</span></div><div class="body"><div class="muted" id="uiWhat"></div>' +
+    '<a class="btn raised" id="uiApple" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px"><b>Calendario dell&rsquo;iPhone</b></a>' +
+    '<a class="btn raised" id="uiGoogle" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:6px">Google Calendar</a>' +
+    '<button class="btn raised" id="uiFile" style="display:block;width:100%;margin-top:6px">Salva il file (poi aprilo da File)</button>' +
+    '<div class="muted" style="font-size:11px;margin-top:6px">Con Google Calendar gli avvisi sono quelli impostati in Google, non quelli scelti qui.</div>' +
+    '<div class="row" style="justify-content:flex-end;margin-top:8px"><button class="btn raised" id="uiClose">Chiudi</button></div></div>');
+  function gDate(t) { return new Date(t).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, ''); }
+  function iosRem(u, txt, fname) {
+    $('uiWhat').innerHTML = '<b>' + esc(u.name) + '</b><br>' + esc(whenTxt(u.t, tzOf(u)));
+    $('uiApple').href = 'ics.html#d=' + enc(txt);
+    $('uiGoogle').href = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent('🎣 ' + u.name) +
+      '&dates=' + gDate(u.t) + '/' + gDate(u.t + 3 * 3600e3) + '&location=' + encodeURIComponent(u.place.name + ' (' + u.place.lat.toFixed(5) + ', ' + u.place.lon.toFixed(5) + ')') +
+      '&details=' + encodeURIComponent((u.snap.targetName || '') + ' · ' + (u.snap.typeName || '') + ' · probabilità ' + u.snap.pct + '%');
+    $('uiFile').onclick = function () {
+      var f = new File([txt], fname, { type: 'text/calendar' });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) navigator.share({ files: [f], title: u.name }).catch(function () {});
+      else { var url = URL.createObjectURL(f), a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove(); }
+    };
+    iosDlg.hidden = false;
+  }
+  $('uiClose').onclick = function () { iosDlg.hidden = true; };
   var remFor = null;
   function openRem(u) { remFor = u; $('urWhat').innerHTML = '<b>' + esc(u.name) + '</b><br>' + esc(whenTxt(u.t, tzOf(u))); setRem('urR', u.rem); remDlg.hidden = false; }
   $('urNo').onclick = function () { remDlg.hidden = true; remFor = null; };
@@ -3812,7 +3835,19 @@ var PescaEngine = (function () {
   };
   document.querySelectorAll('.outSave').forEach(function (b) { b.onclick = function () { openSave(); }; });
   document.querySelectorAll('.outNew').forEach(function (b) { b.onclick = function () { openSave(null, 'new'); }; });
-  document.querySelectorAll('.outShare').forEach(function (b) { b.onclick = function () { openSave(function (u) { share('u', u); }); }; });
+  // Condividi: se l'uscita aperta è già salvata e non hai cambiato nulla, la condivide e basta;
+  // se non è salvata (o hai cambiato posto, giorno, ora, tecnica o pesce) prima chiede di salvarla
+  function sameAsSaved(u, s) {
+    return u && s && u.t === s.t && Math.abs(u.place.lat - s.place.lat) < 1e-5 && Math.abs(u.place.lon - s.place.lon) < 1e-5 &&
+      u.type === s.type && u.target === s.target && u.env === s.env && u.spot === s.spot;
+  }
+  document.querySelectorAll('.outShare').forEach(function (b) {
+    b.onclick = function () {
+      var u = editId && find(editId), s = window.PescaSnap && window.PescaSnap();
+      if (sameAsSaved(u, s)) { share('u', u); return; }
+      openSave(function (x) { share('u', x); });
+    };
+  });
 
   // ---------- apri in Pescomante ----------
   function openInApp(u, editing) {
